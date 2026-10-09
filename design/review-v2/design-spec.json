@@ -1,0 +1,23 @@
+{
+  "status": "Revised gameplay visual concept; not a playable build",
+  "supersedes": "review-v1 cube/tile gameplay imagery and movement descriptions",
+  "rendering": "Orthogonal bent arrow paths with raised 3D bevels on a readable pale board, navy/gold controls",
+  "rules": {
+    "lives": 3,
+    "wrongTap": "An actual tap on a blocked arrow costs exactly one heart; arrow stays in place.",
+    "emptyTap": "No penalty",
+    "gestures": "Pan and zoom never cost hearts",
+    "input": "Suppress duplicate accidental taps during error feedback",
+    "failure": "At zero hearts, stop gameplay and show Restart Level; reset same puzzle to initial state with three hearts.",
+    "scope": "Classic and Daily Puzzle; duel penalty remains undecided",
+    "progress": "Previously completed levels retained"
+  },
+  "notes": [
+    "Generated arrow geometry and collision marker are illustrative and are not verified solvable levels.",
+    "Blocked-arrow effect must be located directly along selected head exit path in actual implementation.",
+    "Hint price 50 is a visual placeholder, not finalized economy.",
+    "Raised 3D appearance does not specify full rotating volumetric gameplay."
+  ],
+  "tool": "built-in image_gen",
+  "prompt": "Use case: ui-mockup. Create a high-fidelity ArrowNova revised mobile gameplay concept, THREE large complete portrait screens in one landscape presentation. The TWO attached reference images define the gameplay geometry: long thin orthogonal POLYLINE ARROWS with many right-angle bends interwoven in a dense silhouette-shaped puzzle. Preserve this TYPE of puzzle, invent a new original layout; NEVER substitute square arrow tiles, cubes, block grids, sliding blocks, or a 3D rotating cube. Each continuous path has exactly one clear triangular arrowhead and a blunt tail; paths stay visually separate with ample gaps. This is a 2D readable puzzle topology rendered as physically raised shallow 3D glass ribbons with beveled edges, subtle side faces and gentle contact shadows, viewed straight-on with minimal depth. Premium ArrowNova palette: midnight navy app chrome, champagne-gold primary actions, a spacious pale ice/ivory board for maximum legibility, sapphire-blue arrow ribbons with cyan edge highlights, no busy scenery behind arrows. Elegant clear mobile UI, sophisticated rendering. Display the exact title ArrowNova small at top and Level 25; back left, pause right. SCREEN 1 caption '01 • Play': three bright red hearts at top, large ORIGINAL roughly circular maze of about 22 separate bent arrow paths filling 70% of screen; carefully organized readable horizontal/vertical strokes, not random scribbles. Include one free right-facing path at perimeter that can exit. Bottom three controls Restart, Hint with small 50 coin cost, Sound. No timer in Classic. SCREEN 2 caption '02 • Blocked arrow': repeat EXACT same puzzle and camera/layout; two red hearts plus one gray heart, ONE selected arrow ribbon tinted coral red, its head points directly at a distinct nearby blocking blue path ahead with a small collision ripple; subtle shake suggestion without blurring board. Small calm feedback label 'Path blocked • 1 heart lost'. All other paths sapphire. SCREEN 3 caption '03 • Try again': repeat same board dimmed beneath elegant rounded navy modal with THREE empty heart icons; exact title 'No hearts left', body 'Try this puzzle again with 3 hearts.', prominent gold 'Restart Level' button, quiet 'Back to Home' action. No paid revive, ads, shop, or forced login. Clearly beautiful dimensional glass paths, large hit areas, no full-canvas glow, no scenery or fantasy castle. Screens aligned with narrow margins; very high legibility. This is a visual design concept, do not claim logical solvability or working app. Include small exterior title 'ArrowNova • 3D Arrow Paths' and subtitle 'Classic mode • Three hearts'."
+}

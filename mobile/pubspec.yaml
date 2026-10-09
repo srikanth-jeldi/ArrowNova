@@ -1,0 +1,33 @@
+name: arrownova
+description: "ArrowNova — sculpted arrow puzzles by EpitomeHub Technologies."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_secure_storage: ^10.3.1
+  audioplayers: ^6.8.0
+  web_socket_channel: ^3.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: ArrowNovaSerif
+      fonts:
+        - asset: assets/fonts/CormorantGaramond.ttf
+    - family: ArrowNovaSans
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+  assets:
+    - assets/branding/logo.png
+    - assets/audio/
+    - assets/art/

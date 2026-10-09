@@ -1,0 +1,25 @@
+# Local environments and credentials
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+key.properties
+local.properties
+*.pem
+*.key
+
+# Generated output and local tools
+*.log
+*.apk
+*.aab
+*.idsig
+**/build/
+**/.dart_tool/
+**/.gradle/
+**/.build-tmp/
+**/node_modules/
+**/coverage/
+**/test/failures/
+.DS_Store
+Thumbs.db

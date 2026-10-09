@@ -1,0 +1,59 @@
+{
+  "status": "Visual review only; implementation awaits user design approval",
+  "screens": [
+    "01 Welcome",
+    "02 How to Play",
+    "03 Home",
+    "04 Choose Mode",
+    "05 Level Journey",
+    "06 Classic Gameplay",
+    "07 Level Complete",
+    "08 Pause",
+    "09 Daily Puzzle",
+    "10 Solo Time Attack",
+    "11 Duel Lobby",
+    "12 Friend Room",
+    "13 Matchmaking",
+    "14 Live Duel Gameplay",
+    "15 Duel Result",
+    "16 Connection Interrupted",
+    "17 Crystal Garden",
+    "18 Decorate",
+    "19 Milestone Unlock",
+    "20 Shop (Coins/Themes)",
+    "21 Leaderboard (Rankings/Achievements)",
+    "22 Profile and Statistics",
+    "23 Optional Sign-in",
+    "24 Settings (Help/Privacy/About links)"
+  ],
+  "flows": [
+    "Welcome -> How to Play -> Home -> Classic -> Level Complete -> Next Level",
+    "Home -> Daily Puzzle or Solo Time Attack",
+    "Home -> Live Duel -> optional account prompt -> Lobby -> Matchmaking or Friend Room -> Duel -> Result",
+    "Duel -> Reconnecting -> active Duel or Result; timer continues",
+    "Home -> Garden -> Decorate; each 50 completed levels unlocks area",
+    "Profile -> optional Google sign-in -> cloud save",
+    "Profile -> Settings; Shop and Leaderboard accessible from Home/Profile navigation"
+  ],
+  "authoritative_rules": [
+    "Approved logo is approved-logo.png; mockup approximations must not replace the source asset.",
+    "Classic has no countdown; Time Attack and Duel last 60 seconds.",
+    "Guest solo play; login optional for backup and required for ranked/friend account features.",
+    "No paid boosts or pause in ranked duel.",
+    "Coins and Garden Points are separate.",
+    "Difficulty tiers: Beginner, Easy, Intermediate, Advanced, Expert; 100 levels each; 500 roadmap target."
+  ],
+  "review_caveats": [
+    "Generated mockups are aesthetic proposals, not exact game-state or copy specifications.",
+    "Screen 02 blocked example is not geometrically correct; redraw arrow path with obstacle directly ahead and clear explanation that blocked arrows cannot exit.",
+    "Screen 05 generated tier labels differ from authoritative five tiers; correct during detailed design.",
+    "Screen 09 date is placeholder; use actual daily puzzle date.",
+    "Screen 12 combines create/join/waiting states; implement mutually exclusive states and enable Share only after room creation.",
+    "Screen 14 includes an extra opponent avatar; remove duplicate in detailed layout.",
+    "Screen 16 reconnection success cannot be promised; replace with Trying to reconnect and handle timeout.",
+    "Scores, prices, currencies and rewards in all boards are illustrative; leaderboard scoring to be specified, not inferred from leaf icons.",
+    "Garden guest/avatar/header values vary in renders; unify sample identity and labels.",
+    "Only primary screen and selected tab shown for grouped features; secondary tabs, failure/offline/purchase confirmation states need detailed layout before implementation.",
+    "3D appearance is rendered concept art; actual assets, animations, responsiveness and performance are not yet implemented or validated."
+  ]
+}
