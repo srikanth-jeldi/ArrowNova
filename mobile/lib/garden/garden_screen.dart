@@ -157,7 +157,7 @@ class _GardenScreenState extends State<GardenScreen> {
                                     : '${item.cost} points',
                                 style: const TextStyle(
                                   fontFamily: 'ArrowNovaSans',
-                                  fontSize: 11,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],

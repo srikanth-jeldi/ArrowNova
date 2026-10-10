@@ -86,7 +86,7 @@ class VictoryScreen extends StatelessWidget {
                               style: TextStyle(
                                 fontFamily: 'ArrowNovaSans',
                                 color: Color(0xFF51687C),
-                                fontSize: 11,
+                                fontSize: 12,
                                 letterSpacing: 1,
                               ),
                             ),
@@ -238,7 +238,7 @@ class VictoryScreen extends StatelessWidget {
           style: const TextStyle(
             fontFamily: 'ArrowNovaSans',
             color: Color(0xFF51687C),
-            fontSize: 10,
+            fontSize: 12,
           ),
         ),
       ],

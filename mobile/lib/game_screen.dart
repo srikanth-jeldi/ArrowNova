@@ -497,7 +497,7 @@ class _GameScreenState extends State<GameScreen>
                                           : 'LEVEL ${game.puzzle.level.toString().padLeft(2, '0')}  ·  ${LevelCatalog.isHard(game.puzzle.level) ? 'HARD' : 'CLASSIC'}',
                                       style: const TextStyle(
                                         fontFamily: 'ArrowNovaSans',
-                                        fontSize: 9,
+                                        fontSize: 12,
                                         letterSpacing: 2,
                                         color: muted,
                                       ),
@@ -602,7 +602,7 @@ class _GameScreenState extends State<GameScreen>
                                     '${game.removed.length} / ${game.puzzle.arrows.length} PATHS CLEARED',
                                     style: const TextStyle(
                                       fontFamily: 'ArrowNovaSans',
-                                      fontSize: 9,
+                                      fontSize: 12,
                                       letterSpacing: 1.6,
                                       color: Color(0xFF647C8F),
                                     ),
@@ -648,7 +648,7 @@ class _GameScreenState extends State<GameScreen>
                                                 'PRACTICE $trainingRound OF 2 · $lessonTitle',
                                                 style: const TextStyle(
                                                   fontFamily: 'ArrowNovaSans',
-                                                  fontSize: 11,
+                                                  fontSize: 12,
                                                   fontWeight: FontWeight.bold,
                                                   color: navy,
                                                 ),
@@ -710,7 +710,7 @@ class _GameScreenState extends State<GameScreen>
                                             : 'Tap a clear path  ·  Pinch to zoom',
                                         key: ValueKey(busy && blocked),
                                         style: TextStyle(
-                                          fontSize: 11,
+                                          fontSize: 12,
                                           color: busy && blocked
                                               ? const Color(0xFFC24055)
                                               : const Color(0xFF687F90),
