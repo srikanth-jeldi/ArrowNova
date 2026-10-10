@@ -1,7 +1,7 @@
 name: arrownova
 description: "ArrowNova — sculpted arrow puzzles by EpitomeHub Technologies."
 publish_to: 'none'
-version: 0.2.4+6
+version: 0.2.5+7
 
 environment:
   sdk: ^3.13.3
@@ -17,6 +17,7 @@ dependencies:
   timezone: ^0.11.1
   flutter_timezone: ^5.1.1
   url_launcher: ^6.3.3
+  package_info_plus: 10.2.1
 
 dev_dependencies:
   flutter_test:

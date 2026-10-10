@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:package_info_plus/package_info_plus.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 import 'core/reminders.dart';
@@ -49,6 +51,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final store = ProgressStore();
+  late final Future<PackageInfo> packageInfo = PackageInfo.fromPlatform();
   PlayerProgress progress = PlayerProgress();
   bool loading = true;
   bool openingLevel = false;
@@ -343,6 +346,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   'Play without an account. Progress is saved on this device. Clearing app or browser data removes it.',
                   style: TextStyle(color: muted, height: 1.6),
                   textAlign: TextAlign.center,
+                ),
+              ),
+              FutureBuilder<PackageInfo>(
+                future: packageInfo,
+                builder: (context, snapshot) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    snapshot.hasData
+                        ? 'Version ${snapshot.data!.version} · Build ${snapshot.data!.buildNumber}'
+                        : snapshot.hasError
+                        ? 'Version unavailable'
+                        : 'Loading version…',
+                    style: const TextStyle(color: muted, fontSize: 12),
+                  ),
                 ),
               ),
               const Text(
