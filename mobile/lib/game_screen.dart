@@ -158,7 +158,7 @@ class _GameScreenState extends State<GameScreen>
       active = id;
       blocked = result == TapResult.blocked;
     });
-    sound(blocked ? 'blocked' : 'clear');
+    sound(blocked ? (game.lost ? 'lost' : 'blocked') : 'clear');
     animation.duration = Duration(
       milliseconds: MediaQuery.disableAnimationsOf(context)
           ? 80

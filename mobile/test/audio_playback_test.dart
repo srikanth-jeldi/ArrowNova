@@ -41,7 +41,7 @@ void main() {
     effects.pending!.complete();
     await clear;
     await win;
-    expect(effects.events, ['audio/clear.mp3@0.42', 'stop']);
+    expect(effects.events, ['audio/clear.mp3@0.28', 'stop']);
     expect(victory.events, ['audio/win.mp3@0.85']);
     expect(duck, [true]);
     await service.play('clear', sound: true, haptics: false);
@@ -50,7 +50,7 @@ void main() {
     expect(victory.events.last, 'stop');
     expect(duck.last, false);
     await service.play('clear', sound: true, haptics: false);
-    expect(effects.events.last, 'audio/clear.mp3@0.42');
+    expect(effects.events.last, 'audio/clear.mp3@0.28');
     service.dispose();
   });
   test('mute remains silent and stop cancels queued victory', () async {
@@ -72,8 +72,33 @@ void main() {
     expect(victory.events, ['stop']);
     service.dispose();
   });
+  test(
+    'blocked and final-life errors use dedicated cues, mute suppresses both',
+    () async {
+      final effects = FakeOutput(), victory = FakeOutput();
+      final service = FeedbackService(
+        effects: effects,
+        victory: victory,
+        onCelebration: (_) {},
+      );
+      await service.play('blocked', sound: true, haptics: false);
+      await service.play('lost', sound: true, haptics: false);
+      await service.play('blocked', sound: false, haptics: false);
+      await service.play('lost', sound: false, haptics: false);
+      expect(effects.events, ['audio/blocked.mp3@0.48', 'audio/lost.mp3@0.48']);
+      expect(victory.events, isEmpty);
+      service.dispose();
+    },
+  );
   test('new assets packaged and old machine sounds absent', () {
-    for (final name in ['clear', 'blocked', 'win', 'ambient']) {
+    for (final name in [
+      'clear',
+      'blocked',
+      'lost',
+      'life_lost',
+      'win',
+      'ambient',
+    ]) {
       expect(File('assets/audio/$name.mp3').lengthSync(), greaterThan(1000));
       expect(File('assets/audio/$name.wav').existsSync(), false);
     }

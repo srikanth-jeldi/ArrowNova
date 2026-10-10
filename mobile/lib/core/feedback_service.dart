@@ -65,7 +65,9 @@ class FeedbackService {
     if (_disposed) return Future.value();
     if (haptics) {
       unawaited(
-        event == 'blocked'
+        event == 'lost'
+            ? HapticFeedback.heavyImpact()
+            : event == 'blocked'
             ? HapticFeedback.mediumImpact()
             : HapticFeedback.lightImpact(),
       );
@@ -85,7 +87,7 @@ class FeedbackService {
           });
           await _victory.play('audio/win.mp3', .85);
         } else {
-          await _effects.play('audio/$event.mp3', event == 'clear' ? .42 : .38);
+          await _effects.play('audio/$event.mp3', event == 'clear' ? .28 : .48);
         }
       } catch (error) {
         debugPrint('ArrowNova audio ($event): $error');
