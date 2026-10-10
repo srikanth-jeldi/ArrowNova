@@ -26,6 +26,13 @@ Flutter/flutter_assets/
 Flutter/flutter_export_environment.sh
 ServiceDefinitions.json
 Runner/GeneratedPluginRegistrant.*
+Flutter/Ads.local.xcconfig
+Flutter/Signing.local.xcconfig
+ads.ios.local.json
+*.ipa
+*.xcarchive/
+*.mobileprovision
+*.p12
 
 # Exceptions to above rules.
 !default.mode1v3

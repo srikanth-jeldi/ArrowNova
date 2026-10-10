@@ -30,3 +30,4 @@ Thumbs.db
 
 # Local Android crash-reproduction emulator
 .android-avd/
+__pycache__/
