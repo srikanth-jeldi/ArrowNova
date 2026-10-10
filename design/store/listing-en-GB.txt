@@ -8,7 +8,7 @@ Think. Move. Solve.
 
 ArrowNova is a single-player arrow puzzle game with sapphire-blue paths, gentle sound effects and a crystal-garden world. Tap an arrow with a clear exit, remove blockers in the right order and clear the whole shape.
 
-6,000 CLASSIC PUZZLES
+60 CHAPTERS · 6,000 CLASSIC PUZZLES
 Start with 30 arrows and work towards intricate boards with up to 200. Short and long paths form circles, diamonds, shields and leaves. Pinch to zoom when you need a closer look.
 
 LEARN BY PLAYING
@@ -21,12 +21,12 @@ A DAILY CHALLENGE
 Return for the day's puzzle, build a local streak and earn a first-completion reward. Optional reminders can be enabled in Settings for around 9 AM, 1 PM and 7 PM in your phone's local time. You can turn them off at any time.
 
 PLAY AT YOUR PACE
-Classic and daily puzzles work offline. No account is required. Separate music, sound and vibration controls let you adjust the experience. A gentle original soundtrack accompanies your puzzles.
+Unlocked Classic chapters and the regular daily puzzle work offline. Chapter 1 is open; after finishing each 100-level chapter, complete one rewarded ad to unlock the next. Unlocked chapters remain available on this device. No account is required. Separate music, sound and vibration controls let you adjust the experience. A gentle original soundtrack accompanies your puzzles.
 
 DAILY CHEST
 Complete one rewarded ad to unlock five hard puzzles until local midnight. Solve them to earn stars and first-completion rewards.
 
-ArrowNova contains ads. Hints and Classic level skips require a completed rewarded ad outside practice. Skipping awards no stars or currency, and skipped levels remain replayable. Ads require an internet connection and availability. Progress is stored on your device and is not synced through an account.
+ArrowNova contains banner ads and an interstitial opportunity after every two newly completed Classic levels. Chapter unlocks use rewarded ads; these replace the interstitial at that transition. Hints and Classic level skips require a completed rewarded ad outside practice. Skipping awards no stars or currency, and skipped levels remain replayable. Ads require an internet connection and availability. Progress is stored on your device and is not synced through an account.
 
 Support: contactus@epitomehub.com
 Privacy: https://www.epitomehub.com/arrownova-privacy

@@ -3,6 +3,9 @@ import 'core/ads.dart';
 
 import 'dart:async';
 
+import 'core/chapter_gate.dart';
+import 'game/chapters.dart';
+
 import 'package:flutter/material.dart';
 
 import 'core/progress_store.dart';
@@ -228,6 +231,18 @@ class _GameScreenState extends State<GameScreen>
   Future<void> next() async {
     if (changingLevel) return;
     changingLevel = true;
+    if (!learning &&
+        !await ensureChapter(
+          context,
+          widget.progress,
+          game.puzzle.level + 1,
+          widget.onSettingsChanged,
+          showAd: widget.showHintAd,
+        )) {
+      changingLevel = false;
+      return;
+    }
+    if (!mounted) return;
     if (!learning && widget.progress.consumeAdBreak()) {
       widget.onSettingsChanged();
       await GameAds.instance.showAtBreak();
@@ -330,8 +345,8 @@ class _GameScreenState extends State<GameScreen>
       context: context,
       builder: (dialog) => AlertDialog(
         title: const Text('Skip this level?'),
-        content: const Text(
-          'Complete a rewarded ad to unlock the next Classic level. This level stays available to replay. Skipping gives no stars, coins or garden points.',
+        content: Text(
+          'Complete a rewarded ad to unlock the next Classic level. This level stays available to replay. Skipping gives no stars, coins or garden points.${game.puzzle.level % ChapterCatalog.size == 0 ? ' This ad also unlocks the next chapter.' : ''}',
         ),
         actions: [
           TextButton(
@@ -358,6 +373,10 @@ class _GameScreenState extends State<GameScreen>
     setState(() => hintFlow = false);
     if (result == HintAdResult.earned) {
       widget.progress.skip(game.puzzle.level);
+      if (game.puzzle.level % ChapterCatalog.size == 0) {
+        widget.progress.unlockChapter(ChapterCatalog.of(game.puzzle.level + 1));
+        widget.progress.levelsSinceAdBreak = 0;
+      }
       widget.onSettingsChanged();
       advanceLevel();
     } else if (accepted == true) {

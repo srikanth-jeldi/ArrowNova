@@ -1,4 +1,5 @@
 import '../game/daily.dart';
+import '../game/chapters.dart';
 
 import 'dart:convert';
 
@@ -11,6 +12,7 @@ class PlayerProgress {
   PlayerProgress({
     Set<int>? completed,
     Set<int>? skipped,
+    Set<int>? chapters,
     this.chestDay,
     Map<String, int>? chestStars,
     this.music = true,
@@ -24,6 +26,14 @@ class PlayerProgress {
     this.sound = true,
     this.haptics = true,
   }) : completed = completed ?? {},
+       chapters = {
+         1,
+         ...(chapters ??
+             _readChapters({
+               'completed': completed?.toList() ?? [],
+               'skipped': skipped?.toList() ?? [],
+             })),
+       },
        skipped = skipped ?? {},
        chestStars = chestStars ?? {},
        dailyStars = dailyStars ?? {},
@@ -31,6 +41,42 @@ class PlayerProgress {
        placements = placements ?? {},
        bestStars = bestStars ?? {};
   final Set<int> completed;
+  final Set<int> chapters;
+  bool chapterOpen(int chapter) => chapters.contains(chapter);
+  bool chapterEligible(int chapter) =>
+      chapter == 1 ||
+      (chapter >= 2 &&
+          chapter <= ChapterCatalog.count &&
+          (completed.contains(ChapterCatalog.first(chapter) - 1) ||
+              skipped.contains(ChapterCatalog.first(chapter) - 1)));
+  bool unlockChapter(int chapter) {
+    if (!chapterEligible(chapter)) return false;
+    return chapters.add(chapter);
+  }
+
+  static Set<int> _readChapters(Map<String, dynamic> data) {
+    if (data['chapters'] is List) {
+      return {
+        1,
+        ...(data['chapters'] as List).whereType<int>().where(
+          (n) => n >= 1 && n <= ChapterCatalog.count,
+        ),
+      };
+    }
+    // Existing players keep every chapter already reached before chapter gates.
+    var reached = 1;
+    for (final n in [
+      ...(data['completed'] as List? ?? []),
+      ...(data['skipped'] as List? ?? []),
+    ].whereType<int>()) {
+      if (n >= 1 && n <= LevelCatalog.count) {
+        final chapter = ChapterCatalog.of((n + 1).clamp(1, LevelCatalog.count));
+        if (chapter > reached) reached = chapter;
+      }
+    }
+    return {for (var c = 1; c <= reached; c++) c};
+  }
+
   final Set<int> skipped;
   String? chestDay;
   final Map<String, int> chestStars;
@@ -83,11 +129,11 @@ class PlayerProgress {
   bool trainingCompleted;
   int levelsSinceAdBreak;
   void recordAdCompletion() {
-    levelsSinceAdBreak = (levelsSinceAdBreak + 1).clamp(0, 3);
+    levelsSinceAdBreak = (levelsSinceAdBreak + 1).clamp(0, 2);
   }
 
   bool consumeAdBreak() {
-    if (levelsSinceAdBreak < 3) return false;
+    if (levelsSinceAdBreak < 2) return false;
     levelsSinceAdBreak = 0;
     return true;
   }
@@ -131,6 +177,7 @@ class PlayerProgress {
       skipped.contains(level - 1);
   Map<String, Object> toJson() => {
     'completed': completed.toList(),
+    'chapters': chapters.toList(),
     'skipped': skipped.toList(),
     'chestDay': chestDay ?? '',
     'chestStars': chestStars,
@@ -146,6 +193,7 @@ class PlayerProgress {
     'stars': bestStars.map((key, value) => MapEntry('$key', value)),
   };
   factory PlayerProgress.fromJson(Map<String, dynamic> data) => PlayerProgress(
+    chapters: _readChapters(data),
     skipped: (data['skipped'] as List? ?? [])
         .whereType<int>()
         .where((n) => n >= 1 && n < LevelCatalog.count)
@@ -183,7 +231,7 @@ class PlayerProgress {
     },
     trainingCompleted: data['trainingCompleted'] == true,
     levelsSinceAdBreak: data['levelsSinceAdBreak'] is int
-        ? (data['levelsSinceAdBreak'] as int).clamp(0, 3)
+        ? (data['levelsSinceAdBreak'] as int).clamp(0, 2)
         : 0,
     sound: data['sound'] != false,
     haptics: data['haptics'] != false,

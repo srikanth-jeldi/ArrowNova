@@ -106,7 +106,7 @@ Logo is the user-approved generated asset. `tool/generate_audio.cjs` creates ori
 ## Android ads (test inventory)
 
 Google Mobile Ads test banner is displayed in a separate footer outside practice.
-Every three newly completed Classic levels makes one interstitial opportunity on
+Every two newly completed Classic levels makes one interstitial opportunity on
 Next level (or when opening a level after returning home). Replays, failed attempts
 and practice do not count. The counter persists, resets at the opportunity even if
 inventory is unavailable, and never queues a late ad during gameplay. Offline play
@@ -169,3 +169,5 @@ Validated on 10 October 2026: flutter analyze clean; 16 focused tests pass (dail
 rewarded hints, ad cadence, gameplay and animations). ARM64 test-ad release APK:
 25,077,288 bytes; ZIP integrity verified; SHA-256
 0e1079c207e0d8d4c4b3c451e1d0eaf7c87908450cfccf81cda9cb0a7aff686a.
+
+Chapters: 60 worlds of 100 levels. Chapter 1 starts open. Finish/skip the preceding boundary level, then complete one explicitly chosen rewarded ad to unlock the next chapter. Unlocks persist locally; old saves retain chapters already reached. Chapter rewards reset the interstitial counter to avoid stacked ads. A rewarded skip at the boundary also opens the next chapter.

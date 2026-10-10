@@ -7,6 +7,8 @@ import 'game/daily.dart';
 import 'core/ads.dart';
 import 'core/music_service.dart';
 import 'daily_chest_screen.dart';
+import 'chapters_screen.dart';
+import 'core/chapter_gate.dart';
 
 import 'package:flutter/material.dart';
 
@@ -162,6 +164,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> openLevel(int level, {bool training = false}) async {
     if (openingLevel) return;
     openingLevel = true;
+    if (!training && !await ensureChapter(context, progress, level, save)) {
+      openingLevel = false;
+      return;
+    }
     if (!training && progress.consumeAdBreak()) {
       save();
       await GameAds.instance.showAtBreak();
@@ -216,110 +222,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted) setState(() {});
   }
 
-  void levels() => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: navy,
-    builder: (sheet) => SafeArea(
-      child: SizedBox(
-        height: MediaQuery.sizeOf(sheet).height * .78,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text('Your journey', style: TextStyle(fontSize: 26)),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(sheet),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              Text(
-                '${progress.completed.length} / ${LevelCatalog.count} levels complete',
-                style: const TextStyle(color: muted),
-              ),
-              const SizedBox(height: 22),
-              Expanded(
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 90,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemCount: LevelCatalog.count,
-                  itemBuilder: (context, index) {
-                    final n = index + 1;
-                    final unlocked = progress.unlocked(n);
-                    final done = progress.completed.contains(n);
-                    return Semantics(
-                      label:
-                          'Level $n${done
-                              ? ', completed'
-                              : progress.skipped.contains(n)
-                              ? ', skipped, available to replay'
-                              : ''}',
-                      child: OutlinedButton(
-                        onPressed: unlocked
-                            ? () {
-                                Navigator.pop(sheet);
-                                openLevel(n);
-                              }
-                            : null,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: done ? gold : ice,
-                          backgroundColor: done
-                              ? const Color(0xFF214563)
-                              : const Color(0xFF102C46),
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            unlocked
-                                ? Text(
-                                    '$n',
-                                    style: const TextStyle(fontSize: 23),
-                                  )
-                                : const Icon(Icons.lock_outline, size: 22),
-                            if (done)
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(
-                                  3,
-                                  (i) => Icon(
-                                    i < (progress.bestStars[n] ?? 0)
-                                        ? Icons.star
-                                        : Icons.star_border,
-                                    color: gold,
-                                    size: 13,
-                                  ),
-                                ),
-                              ),
-                            if (!done && progress.skipped.contains(n))
-                              const Text(
-                                'Skipped',
-                                style: TextStyle(fontSize: 10, color: muted),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+  Future<void> levels() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChaptersScreen(
+          progress: progress,
+          save: save,
+          openLevel: openLevel,
         ),
       ),
-    ),
-  );
+    );
+    if (mounted) setState(() {});
+  }
 
   void settings() => showModalBottomSheet<void>(
     context: context,

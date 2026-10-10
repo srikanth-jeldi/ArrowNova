@@ -3,10 +3,10 @@ import 'package:arrownova/core/progress_store.dart';
 import 'package:arrownova/core/ads.dart';
 
 void main() {
-  test('ad break is due only after three completions and survives restart', () {
+  test('ad break is due only after two completions and survives restart', () {
     var progress = PlayerProgress();
     expect(progress.consumeAdBreak(), isFalse);
-    for (var i = 0; i < 2; i++) {
+    for (var i = 0; i < 1; i++) {
       progress.recordAdCompletion();
       expect(progress.consumeAdBreak(), isFalse);
     }
@@ -14,7 +14,7 @@ void main() {
     progress.recordAdCompletion();
     expect(progress.consumeAdBreak(), isTrue);
     expect(progress.consumeAdBreak(), isFalse);
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < 2; i++) {
       progress.recordAdCompletion();
     }
     expect(progress.consumeAdBreak(), isTrue);
@@ -34,7 +34,7 @@ void main() {
       );
       expect(
         PlayerProgress.fromJson({'levelsSinceAdBreak': 900}).levelsSinceAdBreak,
-        3,
+        2,
       );
       expect(
         PlayerProgress.fromJson({'levelsSinceAdBreak': 'bad'})

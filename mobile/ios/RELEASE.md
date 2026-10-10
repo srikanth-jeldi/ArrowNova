@@ -1,7 +1,7 @@
 # iOS release status
 
 Native runner prepared on Windows; no claim of a successful iOS build or device test.
-Bundle ID: `com.epitomehub.arrownova`. Minimum iOS 15.0. Version 0.2.1 (3).
+Bundle ID: `com.epitomehub.arrownova`. Minimum iOS 15.0. Version 0.2.2 (4).
 
 ## On the release Mac
 
