@@ -7,9 +7,14 @@ import 'package:arrownova/core/feedback_service.dart';
 class FakeOutput implements FeedbackOutput {
   final events = <String>[];
   Completer<void>? pending;
+  bool failNext = false;
   @override
   Future<void> play(String asset, double volume) async {
     events.add('$asset@$volume');
+    if (failNext) {
+      failNext = false;
+      throw StateError('decoder failed');
+    }
     await pending?.future;
   }
 
@@ -87,6 +92,28 @@ void main() {
       await service.play('lost', sound: false, haptics: false);
       expect(effects.events, ['audio/blocked.mp3@0.48', 'audio/lost.mp3@0.48']);
       expect(victory.events, isEmpty);
+      service.dispose();
+    },
+  );
+  test(
+    'failed victory reports an error and does not suppress later effects',
+    () async {
+      final effects = FakeOutput(), victory = FakeOutput()..failNext = true;
+      final errors = <String>[];
+      final duck = <bool>[];
+      final service = FeedbackService(
+        effects: effects,
+        victory: victory,
+        onCelebration: duck.add,
+        onError: (event, error) => errors.add(event),
+      );
+      await service.play('win', sound: true, haptics: false);
+      expect(errors, ['win']);
+      expect(duck, [true, false]);
+      await service.play('clear', sound: true, haptics: false);
+      expect(effects.events.last, 'audio/clear.mp3@0.28');
+      await service.play('win', sound: true, haptics: false);
+      expect(victory.events.length, 2);
       service.dispose();
     },
   );

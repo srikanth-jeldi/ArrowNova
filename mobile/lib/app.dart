@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'sound_check.dart';
+
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:url_launcher/url_launcher.dart';
@@ -245,128 +247,138 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (context, update) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ValueListenableBuilder<bool>(
-                valueListenable: GameAds.instance.privacyRequired,
-                builder: (_, required, _) => required
-                    ? TextButton(
-                        onPressed: () {
-                          Navigator.pop(sheet);
-                          GameAds.instance.privacyOptions();
-                        },
-                        child: const Text('Ad privacy choices'),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-              const Text('Make it yours', style: TextStyle(fontSize: 27)),
-              SwitchListTile(
-                title: const Text('Daily reminders'),
-                subtitle: const Text('9 AM · 1 PM · 7 PM (phone time)'),
-                value: progress.dailyReminders,
-                onChanged: (enabled) async {
-                  bool ok;
-                  if (enabled) {
-                    ok = await DailyReminders.instance.enable(
-                      progress.dailyStars.keys.toSet(),
-                    );
-                  } else {
-                    ok = await DailyReminders.instance.sync(
-                      false,
-                      progress.dailyStars.keys.toSet(),
-                    );
-                  }
-                  if (!mounted) return;
-                  progress.dailyReminders = enabled && ok;
-                  save();
-                  if (context.mounted) update(() {});
-                  setState(() {});
-                  if (!ok) {
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Reminders could not be enabled or updated. Check Android notification settings.',
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ValueListenableBuilder<bool>(
+                  valueListenable: GameAds.instance.privacyRequired,
+                  builder: (_, required, _) => required
+                      ? TextButton(
+                          onPressed: () {
+                            Navigator.pop(sheet);
+                            GameAds.instance.privacyOptions();
+                          },
+                          child: const Text('Ad privacy choices'),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+                const Text('Make it yours', style: TextStyle(fontSize: 27)),
+                SwitchListTile(
+                  title: const Text('Daily reminders'),
+                  subtitle: const Text('9 AM · 1 PM · 7 PM (phone time)'),
+                  value: progress.dailyReminders,
+                  onChanged: (enabled) async {
+                    bool ok;
+                    if (enabled) {
+                      ok = await DailyReminders.instance.enable(
+                        progress.dailyStars.keys.toSet(),
+                      );
+                    } else {
+                      ok = await DailyReminders.instance.sync(
+                        false,
+                        progress.dailyStars.keys.toSet(),
+                      );
+                    }
+                    if (!mounted) return;
+                    progress.dailyReminders = enabled && ok;
+                    save();
+                    if (context.mounted) update(() {});
+                    setState(() {});
+                    if (!ok) {
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Reminders could not be enabled or updated. Check Android notification settings.',
+                          ),
                         ),
-                      ),
-                    );
-                  }
-                },
-              ),
-              Wrap(
-                alignment: WrapAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: () => openHelp('privacy'),
-                    child: const Text('Privacy policy'),
-                  ),
-                  TextButton(
-                    onPressed: () => openHelp('support'),
-                    child: const Text('Help & support'),
-                  ),
-                ],
-              ),
-              TextButton.icon(
-                icon: const Icon(Icons.school_outlined),
-                label: const Text('Practice how to play'),
-                onPressed: () {
-                  Navigator.pop(sheet);
-                  openLevel(progress.nextLevel, training: true);
-                },
-              ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Crystal sounds'),
-                value: progress.sound,
-                onChanged: (value) {
-                  update(() => progress.sound = value);
-                  save();
-                },
-              ),
-              SwitchListTile(
-                title: const Text('Background music'),
-                subtitle: const Text('Quiet ambient loop'),
-                value: progress.music,
-                onChanged: (value) {
-                  update(() => progress.music = value);
-                  save();
-                },
-              ),
-              SwitchListTile(
-                title: const Text('Haptic feedback'),
-                value: progress.haptics,
-                onChanged: (value) {
-                  update(() => progress.haptics = value);
-                  save();
-                },
-              ),
-              const Padding(
-                padding: EdgeInsets.all(12),
-                child: Text(
-                  'Play without an account. Progress is saved on this device. Clearing app or browser data removes it.',
-                  style: TextStyle(color: muted, height: 1.6),
-                  textAlign: TextAlign.center,
+                      );
+                    }
+                  },
                 ),
-              ),
-              FutureBuilder<PackageInfo>(
-                future: packageInfo,
-                builder: (context, snapshot) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () => openHelp('privacy'),
+                      child: const Text('Privacy policy'),
+                    ),
+                    TextButton(
+                      onPressed: () => openHelp('support'),
+                      child: const Text('Help & support'),
+                    ),
+                  ],
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.school_outlined),
+                  label: const Text('Practice how to play'),
+                  onPressed: () {
+                    Navigator.pop(sheet);
+                    openLevel(progress.nextLevel, training: true);
+                  },
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.volume_up_outlined),
+                  label: const Text('Test sounds'),
+                  onPressed: () => showDialog<void>(
+                    context: this.context,
+                    builder: (_) => SoundCheck(haptics: progress.haptics),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  title: const Text('Game sounds'),
+                  value: progress.sound,
+                  onChanged: (value) {
+                    update(() => progress.sound = value);
+                    save();
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('Background music'),
+                  subtitle: const Text('Quiet ambient loop'),
+                  value: progress.music,
+                  onChanged: (value) {
+                    update(() => progress.music = value);
+                    save();
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('Haptic feedback'),
+                  value: progress.haptics,
+                  onChanged: (value) {
+                    update(() => progress.haptics = value);
+                    save();
+                  },
+                ),
+                const Padding(
+                  padding: EdgeInsets.all(12),
                   child: Text(
-                    snapshot.hasData
-                        ? 'Version ${snapshot.data!.version} · Build ${snapshot.data!.buildNumber}'
-                        : snapshot.hasError
-                        ? 'Version unavailable'
-                        : 'Loading version…',
-                    style: const TextStyle(color: muted, fontSize: 12),
+                    'Play without an account. Progress is saved on this device. Clearing app or browser data removes it.',
+                    style: TextStyle(color: muted, height: 1.6),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-              ),
-              const Text(
-                'ArrowNova • EpitomeHub Technologies',
-                style: TextStyle(color: gold, fontSize: 12),
-              ),
-            ],
+                FutureBuilder<PackageInfo>(
+                  future: packageInfo,
+                  builder: (context, snapshot) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      snapshot.hasData
+                          ? 'Version ${snapshot.data!.version} · Build ${snapshot.data!.buildNumber}'
+                          : snapshot.hasError
+                          ? 'Version unavailable'
+                          : 'Loading version…',
+                      style: const TextStyle(color: muted, fontSize: 12),
+                    ),
+                  ),
+                ),
+                const Text(
+                  'ArrowNova • EpitomeHub Technologies',
+                  style: TextStyle(color: gold, fontSize: 12),
+                ),
+              ],
+            ),
           ),
         ),
       ),

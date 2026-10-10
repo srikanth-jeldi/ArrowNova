@@ -16,7 +16,8 @@ abstract class FeedbackOutput {
 class _AssetOutput implements FeedbackOutput {
   AudioPlayer? _player;
   Future<void>? _ready;
-  Future<void> _prepare() => _ready ??= () async {
+  Future<void> _prepare() => _ready ??= _initialize();
+  Future<void> _initialize() async {
     _player = AudioPlayer();
     await _player!.setAudioContext(
       AudioContext(
@@ -24,11 +25,22 @@ class _AssetOutput implements FeedbackOutput {
         iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
       ),
     );
-  }();
+  }
+
   @override
   Future<void> play(String asset, double volume) async {
-    await _prepare();
-    await _player!.play(AssetSource(asset), volume: volume);
+    try {
+      await _prepare();
+      await _player!.play(AssetSource(asset), volume: volume);
+    } catch (_) {
+      final failed = _player;
+      _player = null;
+      _ready = null;
+      try {
+        await failed?.dispose();
+      } catch (_) {}
+      rethrow;
+    }
   }
 
   @override
@@ -47,9 +59,11 @@ class FeedbackService {
     FeedbackOutput? effects,
     FeedbackOutput? victory,
     void Function(bool)? onCelebration,
+    this.onError,
   }) : _effects = effects ?? _AssetOutput(),
        _victory = victory ?? _AssetOutput(),
        _onCelebration = onCelebration ?? MusicService.instance.setCelebrating;
+  final void Function(String event, Object error)? onError;
   final FeedbackOutput _effects, _victory;
   final void Function(bool) _onCelebration;
   Future<void> _queue = Future.value();
@@ -90,6 +104,12 @@ class FeedbackService {
           await _effects.play('audio/$event.mp3', event == 'clear' ? .28 : .48);
         }
       } catch (error) {
+        if (event == 'win') {
+          _celebrating = false;
+          _duckTimer?.cancel();
+          _onCelebration(false);
+        }
+        onError?.call(event, error);
         debugPrint('ArrowNova audio ($event): $error');
       }
     });
