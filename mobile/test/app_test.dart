@@ -227,6 +227,7 @@ void main() {
           moves: 30,
           elapsed: const Duration(seconds: 4),
           firstCompletion: true,
+          totalCoins: 40,
           onNext: () {},
           onReplay: () {},
           onHome: () {},

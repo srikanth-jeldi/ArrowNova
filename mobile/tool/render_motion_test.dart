@@ -48,6 +48,7 @@ void main() {
           moves: 30,
           elapsed: const Duration(seconds: 42),
           firstCompletion: true,
+          totalCoins: 40,
           onNext: () {},
           onReplay: () {},
           onHome: () {},

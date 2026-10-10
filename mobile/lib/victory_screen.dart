@@ -14,11 +14,12 @@ class VictoryScreen extends StatelessWidget {
     required this.moves,
     required this.elapsed,
     required this.firstCompletion,
+    required this.totalCoins,
     required this.onNext,
     required this.onReplay,
     required this.onHome,
   });
-  final int level, stars, moves;
+  final int level, stars, moves, totalCoins;
   final String? dailyLabel;
   final Duration elapsed;
   final bool firstCompletion;
@@ -44,6 +45,7 @@ class VictoryScreen extends StatelessWidget {
                       Image.asset(
                         'assets/art/victory-garden.png',
                         fit: BoxFit.cover,
+                        cacheWidth: 1080,
                       ),
                       const DecoratedBox(
                         decoration: BoxDecoration(
@@ -71,8 +73,9 @@ class VictoryScreen extends StatelessWidget {
                               'Beautifully solved!',
                               textAlign: TextAlign.center,
                               style: TextStyle(
+                                fontFamily: 'ArrowNovaSans',
                                 color: navy,
-                                fontSize: 34,
+                                fontSize: 29,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -83,8 +86,8 @@ class VictoryScreen extends StatelessWidget {
                               style: TextStyle(
                                 fontFamily: 'ArrowNovaSans',
                                 color: Color(0xFF51687C),
-                                fontSize: 9,
-                                letterSpacing: 2,
+                                fontSize: 11,
+                                letterSpacing: 1,
                               ),
                             ),
                             const SizedBox(height: 18),
@@ -116,12 +119,21 @@ class VictoryScreen extends StatelessWidget {
                                   _stat(
                                     Icons.toll,
                                     firstCompletion ? '+40' : '+0',
-                                    'Coins',
+                                    'Earned',
                                   ),
                                 ],
                               ),
                             ),
                             const SizedBox(height: 12),
+                            Text(
+                              'Total coins: $totalCoins',
+                              style: const TextStyle(
+                                fontFamily: 'ArrowNovaSans',
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: navy,
+                              ),
+                            ),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -182,7 +194,7 @@ class VictoryScreen extends StatelessWidget {
                               style: const TextStyle(
                                 fontFamily: 'ArrowNovaSans',
                                 color: Color(0xFF51687C),
-                                fontSize: 10,
+                                fontSize: 12,
                                 letterSpacing: 2,
                               ),
                             ),
@@ -212,6 +224,7 @@ class VictoryScreen extends StatelessWidget {
               child: Text(
                 value,
                 style: const TextStyle(
+                  fontFamily: 'ArrowNovaSans',
                   color: navy,
                   fontSize: 19,
                   fontWeight: FontWeight.bold,
@@ -235,7 +248,10 @@ class VictoryScreen extends StatelessWidget {
       FilledButton.icon(
         onPressed: action,
         icon: Icon(icon, size: 18),
-        label: Text(text, style: const TextStyle(fontSize: 17)),
+        label: Text(
+          text,
+          style: const TextStyle(fontFamily: 'ArrowNovaSans', fontSize: 17),
+        ),
         style: FilledButton.styleFrom(
           backgroundColor: const Color(0xF2FFFFFF),
           foregroundColor: navy,

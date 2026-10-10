@@ -439,6 +439,7 @@ class _GameScreenState extends State<GameScreen>
         moves: game.removed.length + game.mistakes,
         elapsed: playTime.elapsed,
         firstCompletion: firstCompletion,
+        totalCoins: widget.progress.coins,
         dailyLabel: widget.dailyDate != null
             ? '${dayKey(widget.dailyDate!)}${widget.chestIndex != null ? ' · CHEST ${widget.chestIndex! + 1}' : ''}'
             : null,

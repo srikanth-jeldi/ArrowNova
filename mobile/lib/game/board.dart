@@ -250,10 +250,10 @@ class ArrowPainter extends CustomPainter {
       );
       canvas.restore();
       final normal = Offset(-dir.dy, dir.dx);
-      final tip = head + dir * geometry.step * .29;
-      final shoulder = head - dir * geometry.step * .08;
+      final tip = head + dir * geometry.step * .38;
+      final shoulder = head - dir * geometry.step * .16;
       final neck = head - dir * geometry.step * .29;
-      final wing = normal * geometry.step * .26;
+      final wing = normal * geometry.step * .34;
       final halfShaft = normal * width * .5;
       final triangle = Path()
         ..moveTo(tip.dx, tip.dy)
@@ -264,38 +264,35 @@ class ArrowPainter extends CustomPainter {
         ..lineTo((shoulder - halfShaft).dx, (shoulder - halfShaft).dy)
         ..lineTo((shoulder - wing).dx, (shoulder - wing).dy)
         ..close();
-      canvas.drawShadow(triangle, const Color(0x60062C51), depth, false);
+      // Contrasting, solid arrowhead makes direction legible at board scale.
+      // Green indicates the head, not whether the move is unblocked.
+      final headColor = isError
+          ? const Color(0xFFE63950)
+          : hint
+          ? const Color(0xFFFFC84A)
+          : const Color(0xFF10B76A);
+      final headOutline = isError
+          ? const Color(0xFF78172A)
+          : hint
+          ? const Color(0xFF76520A)
+          : const Color(0xFF064D36);
+      canvas.drawShadow(triangle, const Color(0x50062C51), depth, false);
+      canvas.drawPath(triangle, Paint()..color = headColor);
       canvas.drawPath(
         triangle,
         Paint()
-          ..shader = LinearGradient(
-            colors: [
-              light,
-              hint ? const Color(0xFFE0AE42) : const Color(0xFF098DEF),
-              dark,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ).createShader(triangle.getBounds()),
+          ..color = headOutline
+          ..style = PaintingStyle.stroke
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = max(.7, geometry.step * .045),
       );
-      final facet = Path()
-        ..moveTo(tip.dx, tip.dy)
-        ..lineTo((shoulder + wing).dx, (shoulder + wing).dy)
-        ..lineTo(shoulder.dx, shoulder.dy)
-        ..close();
-      canvas.drawPath(facet, Paint()..color = light.withValues(alpha: .5));
-      // The open highlight stops at the neck: no seam across the shaft.
       canvas.drawPath(
         Path()
-          ..moveTo((neck + halfShaft).dx, (neck + halfShaft).dy)
-          ..lineTo((shoulder + halfShaft).dx, (shoulder + halfShaft).dy)
+          ..moveTo(tip.dx, tip.dy)
           ..lineTo((shoulder + wing).dx, (shoulder + wing).dy)
-          ..lineTo(tip.dx, tip.dy)
-          ..lineTo((shoulder - wing).dx, (shoulder - wing).dy),
-        Paint()
-          ..color = light
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = .45,
+          ..lineTo(shoulder.dx, shoulder.dy)
+          ..close(),
+        Paint()..color = const Color(0x50FFFFFF),
       );
       canvas.restore();
       if (isError && !reducedMotion) {
