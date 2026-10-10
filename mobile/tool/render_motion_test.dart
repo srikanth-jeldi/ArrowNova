@@ -57,7 +57,7 @@ void main() {
     );
     await tester.runAsync(
       () => precacheImage(
-        const AssetImage('assets/art/victory-garden.png'),
+        const AssetImage('assets/art/victory-garden.webp'),
         tester.element(find.byType(VictoryScreen)),
       ),
     );

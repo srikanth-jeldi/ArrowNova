@@ -43,7 +43,7 @@ class VictoryScreen extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       Image.asset(
-                        'assets/art/victory-garden.png',
+                        'assets/art/victory-garden.webp',
                         fit: BoxFit.cover,
                         cacheWidth: 1080,
                       ),

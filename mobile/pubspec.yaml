@@ -1,7 +1,7 @@
 name: arrownova
 description: "ArrowNova — sculpted arrow puzzles by EpitomeHub Technologies."
 publish_to: 'none'
-version: 0.2.12+14
+version: 0.2.13+15
 
 environment:
   sdk: ^3.13.3
@@ -37,6 +37,8 @@ flutter:
         - asset: assets/fonts/Roboto-Medium.ttf
           weight: 500
   assets:
-    - assets/branding/logo.png
+    - assets/branding/logo.webp
     - assets/audio/
-    - assets/art/
+    - assets/art/victory-garden.webp
+    - assets/art/garden-courtyard.webp
+    - assets/art/garden-decorations.webp

@@ -10,6 +10,25 @@ before an App Store release. See `ios/RELEASE.md`.
 ## Play Store signing
 
 Run `./tool/build-store.ps1` to build an upload-signed AAB with live ArrowNova ads.
+
+Release size: runtime artwork uses WebP; original PNG sources remain in the
+repository but are not bundled. Store builds retain all Flutter Android ABIs.
+Both release build scripts use `--split-debug-info`. Store builds archive native libraries, Dart
+symbols and R8 mapping under `build/release-diagnostics/<version>/store/`.
+Preserve that directory with each release for crash diagnosis; it is ignored by
+Git. The standard AAB retains native metadata and the R8 mapping. The script also
+produces `app-release-compact.aab`, signed with the same upload key. Only native
+debug metadata and the R8 mapping are detached; runtime modules and all ABIs are
+unchanged. When uploading the compact AAB, also upload `native-debug-symbols.zip`
+and `mapping.txt` from its diagnostics directory to Play Console for crash reports.
+AAB upload size is not the user
+download size: measure device splits with bundletool or Play Console.
+
+Measured 0.2.13+15: compact signed AAB 27,976,790 bytes (26.7 MiB), down
+from 61,454,005 bytes (58.6 MiB). Bundletool 1.18.3 estimates 13,531,346
+bytes (12.9 MiB) downloaded for ARM64, Android 12, English, density 420;
+the previous release was 16,183,610 bytes (15.4 MiB) on the same configuration.
+These are estimates, not a measurement from a physical phone or Play Console.
 It requires local `android/key.properties` and the referenced upload keystore.
 These files are ignored by Git; keep a secure backup outside this checkout.
 Do not replace an existing upload key during later updates. Ordinary test APKs

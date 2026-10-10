@@ -16,7 +16,8 @@ try {
             flutter build apk --debug
         } else {
             # Deliver one optimized phone architecture, not a universal debug APK.
-            flutter build apk --release --split-per-abi --target-platform android-arm64 $taskAdMode
+            $taskVersion = ((Select-String -Path 'pubspec.yaml' -Pattern '^version:').Line -replace '^version:\s*', '').Trim()
+            flutter build apk --release --split-per-abi --target-platform android-arm64 "--split-debug-info=build/release-diagnostics/$taskVersion/apk/dart" $taskAdMode
         }
         if ($LASTEXITCODE -ne 0) { throw 'Android build failed.' }
     } finally { Pop-Location }

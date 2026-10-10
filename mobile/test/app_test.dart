@@ -34,7 +34,7 @@ void main() {
       expect(find.text('Live Duel'), findsNothing);
       await tester.runAsync(
         () => precacheImage(
-          const AssetImage('assets/branding/logo.png'),
+          const AssetImage('assets/branding/logo.webp'),
           tester.element(find.byType(HomeScreen)),
         ),
       );

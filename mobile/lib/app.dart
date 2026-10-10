@@ -420,7 +420,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(42),
                             child: Image.asset(
-                              'assets/branding/logo.png',
+                              'assets/branding/logo.webp',
                               fit: BoxFit.cover,
                             ),
                           ),

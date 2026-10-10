@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test('render approved logo into native iOS icon sizes', () async {
-    final bytes = await rootBundle.load('assets/branding/logo.png');
+    final bytes = await rootBundle.load('assets/branding/logo.webp');
     final codec = await ui.instantiateImageCodec(bytes.buffer.asUint8List());
     final source = (await codec.getNextFrame()).image;
     final folder = Directory('ios/Runner/Assets.xcassets/AppIcon.appiconset');

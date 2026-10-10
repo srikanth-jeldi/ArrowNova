@@ -47,7 +47,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.runAsync(
       () => precacheImage(
-        const AssetImage('assets/branding/logo.png'),
+        const AssetImage('assets/branding/logo.webp'),
         tester.element(find.byType(HomeScreen)),
       ),
     );
@@ -93,7 +93,7 @@ void main() {
     );
     await tester.runAsync(
       () => precacheImage(
-        const AssetImage('assets/art/victory-garden.png'),
+        const AssetImage('assets/art/victory-garden.webp'),
         tester.element(find.byType(VictoryScreen)),
       ),
     );
@@ -132,7 +132,7 @@ void main() {
       'ArrowNovaSans',
     )..addFont(rootBundle.load('assets/fonts/Roboto-Regular.ttf'))).load();
     tester.view.physicalSize = const Size(512, 512);
-    const logo = AssetImage('assets/branding/logo.png');
+    const logo = AssetImage('assets/branding/logo.webp');
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
