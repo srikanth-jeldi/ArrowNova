@@ -188,10 +188,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       openingLevel = false;
       return;
     }
-    if (!training && progress.consumeAdBreak()) {
-      save();
-      await GameAds.instance.showAtBreak();
-    }
     if (!mounted) {
       openingLevel = false;
       return;

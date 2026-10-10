@@ -229,6 +229,16 @@ class _GameScreenState extends State<GameScreen>
         game.puzzle.level,
         (3 - game.mistakes + practiceMistakes).clamp(1, 3),
       );
+      // The puzzle is complete, but victory actions are not visible yet.
+      // Never interrupt a new puzzle after the player has pressed Next/Play.
+      if (widget.progress.consumeAdBreak()) {
+        setState(() => celebrating = true);
+        widget.onSettingsChanged();
+        await feedback.stop();
+        await GameAds.instance.showAtBreak();
+        if (!mounted) return;
+        setState(() => celebrating = false);
+      }
       sound('win');
       setState(() {});
     }
@@ -266,10 +276,6 @@ class _GameScreenState extends State<GameScreen>
       return;
     }
     if (!mounted) return;
-    if (!learning && widget.progress.consumeAdBreak()) {
-      widget.onSettingsChanged();
-      await GameAds.instance.showAtBreak();
-    }
     if (!mounted) return;
     changingLevel = false;
     advanceLevel();
@@ -487,7 +493,13 @@ class _GameScreenState extends State<GameScreen>
                           padding: const EdgeInsets.fromLTRB(14, 10, 14, 13),
                           child: Row(
                             children: [
-                              IconButton(
+                              IconButton.filled(
+                                style: IconButton.styleFrom(
+                                  backgroundColor: const Color(0xFF103E6B),
+                                  side: const BorderSide(
+                                    color: Color(0xFF5BBCF4),
+                                  ),
+                                ),
                                 tooltip: 'Back to home',
                                 onPressed: busy
                                     ? null
@@ -500,11 +512,23 @@ class _GameScreenState extends State<GameScreen>
                               Expanded(
                                 child: Column(
                                   children: [
-                                    const Text(
-                                      'ArrowNova',
-                                      style: TextStyle(
-                                        fontSize: 22,
-                                        color: gold,
+                                    ShaderMask(
+                                      blendMode: BlendMode.srcIn,
+                                      shaderCallback: (bounds) =>
+                                          const LinearGradient(
+                                            colors: [
+                                              Colors.white,
+                                              Color(0xFF88EFFF),
+                                              Color(0xFF00AEF4),
+                                            ],
+                                          ).createShader(bounds),
+                                      child: const Text(
+                                        'ArrowNova',
+                                        style: TextStyle(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 3),
@@ -524,7 +548,13 @@ class _GameScreenState extends State<GameScreen>
                                   ],
                                 ),
                               ),
-                              IconButton(
+                              IconButton.filled(
+                                style: IconButton.styleFrom(
+                                  backgroundColor: const Color(0xFF103E6B),
+                                  side: const BorderSide(
+                                    color: Color(0xFF5BBCF4),
+                                  ),
+                                ),
                                 tooltip: 'Pause',
                                 onPressed: busy || overlay
                                     ? null
@@ -541,16 +571,25 @@ class _GameScreenState extends State<GameScreen>
                           child: Container(
                             margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF5F7F7),
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFFF1FAFF),
+                                  Colors.white,
+                                  Color(0xFFEAF7FF),
+                                ],
+                              ),
                               borderRadius: BorderRadius.circular(30),
                               border: Border.all(
-                                color: const Color(0xFF90AEC3),
+                                color: const Color(0xFF82DDFF),
+                                width: 2,
                               ),
                               boxShadow: const [
                                 BoxShadow(
-                                  color: Color(0x50000000),
-                                  blurRadius: 25,
-                                  offset: Offset(0, 12),
+                                  color: Color(0x5531ACFF),
+                                  blurRadius: 18,
+                                  offset: Offset(0, 5),
                                 ),
                               ],
                             ),
@@ -573,15 +612,8 @@ class _GameScreenState extends State<GameScreen>
                                           child: Stack(
                                             alignment: Alignment.center,
                                             children: [
-                                              Icon(
-                                                i < game.lives
-                                                    ? Icons.favorite_rounded
-                                                    : Icons
-                                                          .favorite_border_rounded,
-                                                size: 28,
-                                                color: i < game.lives
-                                                    ? const Color(0xFFF34F6C)
-                                                    : const Color(0xFF98A8B7),
+                                              GlossyHeart(
+                                                filled: i < game.lives,
                                               ),
                                               if (busy &&
                                                   blocked &&

@@ -53,10 +53,10 @@ class VictoryScreen extends StatelessWidget {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              Color(0xEFFFFFFF),
-                              Color(0x00FFFFFF),
-                              Color(0x00FFFFFF),
-                              Color(0xFFF3F4EF),
+                              Color(0x65051B3D),
+                              Color(0x00051B3D),
+                              Color(0x00051B3D),
+                              Color(0xCC062449),
                             ],
                             stops: [0, .29, .58, .85],
                           ),
@@ -70,22 +70,39 @@ class VictoryScreen extends StatelessWidget {
                         child: Column(
                           children: [
                             const Text(
+                              'ArrowNova',
+                              style: TextStyle(
+                                color: Color(0xFF9DEBFF),
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
                               'Beautifully solved!',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontFamily: 'ArrowNovaSans',
-                                color: navy,
+                                color: Colors.white,
                                 fontSize: 29,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
+                                shadows: [
+                                  Shadow(
+                                    color: Color(0xFF063D72),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 5),
                             const Text(
-                              'PUZZLES GROW BRIGHTER WORLDS',
+                              'PUZZLES GROW HERE',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontFamily: 'ArrowNovaSans',
-                                color: Color(0xFF51687C),
+                                color: Color(0xFFDBF6FF),
                                 fontSize: 12,
                                 letterSpacing: 1,
                               ),
@@ -131,7 +148,7 @@ class VictoryScreen extends StatelessWidget {
                                 fontFamily: 'ArrowNovaSans',
                                 fontSize: 17,
                                 fontWeight: FontWeight.w700,
-                                color: navy,
+                                color: Colors.white,
                               ),
                             ),
                             Container(
@@ -193,7 +210,7 @@ class VictoryScreen extends StatelessWidget {
                                   : 'LEVEL ${level.toString().padLeft(2, '0')} COMPLETE',
                               style: const TextStyle(
                                 fontFamily: 'ArrowNovaSans',
-                                color: Color(0xFF51687C),
+                                color: Color(0xFFDBF6FF),
                                 fontSize: 12,
                                 letterSpacing: 2,
                               ),

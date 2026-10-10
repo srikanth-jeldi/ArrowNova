@@ -299,7 +299,19 @@ class ArrowPainter extends CustomPainter {
           ? const Color(0xFF76520A)
           : const Color(0xFF064D36);
       canvas.drawShadow(triangle, const Color(0x50062C51), depth, false);
-      canvas.drawPath(triangle, Paint()..color = headColor);
+      canvas.drawPath(
+        triangle,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.lerp(headColor, Colors.white, .5)!,
+              headColor,
+              headOutline,
+            ],
+          ).createShader(triangle.getBounds()),
+      );
       canvas.drawPath(
         triangle,
         Paint()

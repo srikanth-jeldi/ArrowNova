@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'music_service.dart';
+import 'ad_pacing.dart';
 
 enum HintAdResult { earned, dismissed, unavailable }
 
@@ -44,6 +45,7 @@ class GameAds {
       _loading = false,
       _showing = false;
   int _consentEpoch = 0;
+  final _pacing = AdPacing();
 
   Future<void> initialize() async {
     if (_started ||
@@ -201,11 +203,13 @@ class GameAds {
     _showing = true;
     MusicService.instance.setAd(true);
     var earned = false;
+    var shown = false;
     final done = Completer<HintAdResult>();
     void finish({bool failed = false}) {
       if (done.isCompleted) return;
       ad.dispose();
       _showing = false;
+      if (shown || earned) _pacing.fullscreenClosed();
       MusicService.instance.setAd(false);
       done.complete(
         earned
@@ -218,6 +222,7 @@ class GameAds {
     }
 
     ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (_) => shown = true,
       onAdDismissedFullScreenContent: (_) => finish(),
       onAdFailedToShowFullScreenContent: (_, _) => finish(failed: true),
     );
@@ -235,7 +240,7 @@ class GameAds {
 
   /// Never waits for inventory and never shows a late ad during a puzzle.
   Future<void> showAtBreak() async {
-    if (_showing) return;
+    if (_showing || !_pacing.canShowInterstitial) return;
     final ad = _interstitial;
     _interstitial = null;
     if (!ready.value || ad == null) {
@@ -251,16 +256,19 @@ class GameAds {
     _showing = true;
     MusicService.instance.setAd(true);
     final done = Completer<void>();
+    var shown = false;
     void finish() {
       if (done.isCompleted) return;
       ad.dispose();
       _showing = false;
+      if (shown) _pacing.fullscreenClosed();
       MusicService.instance.setAd(false);
       done.complete();
       unawaited(preload());
     }
 
     ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (_) => shown = true,
       onAdDismissedFullScreenContent: (_) => finish(),
       onAdFailedToShowFullScreenContent: (_, _) => finish(),
     );
