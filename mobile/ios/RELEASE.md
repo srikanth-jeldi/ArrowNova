@@ -1,7 +1,7 @@
 # iOS release status
 
 Native runner prepared on Windows; no claim of a successful iOS build or device test.
-Bundle ID: `com.epitomehub.arrownova`. Minimum iOS 15.0. Version 0.2.0 (2).
+Bundle ID: `com.epitomehub.arrownova`. Minimum iOS 15.0. Version 0.2.1 (3).
 
 ## On the release Mac
 
@@ -33,7 +33,7 @@ Bundle ID: `com.epitomehub.arrownova`. Minimum iOS 15.0. Version 0.2.0 (2).
 
 Hint ads are required outside practice, including levels above 50. Every tenth
 Classic level already uses the harder dependency rules. Skip is Classic-only,
-excludes level 800 and awards no completion, stars, coins or garden points.
+excludes level 6000 and awards no completion, stars, coins or garden points.
 Skipped puzzles remain playable. Daily Chest unlocks five distinct hard boards
 with one rewarded ad until local midnight; regular Daily Challenge remains free.
 Reward dismissal, failure or missing inventory never grants an unlock.

@@ -87,10 +87,13 @@ class Puzzle {
 }
 
 class LevelCatalog {
-  static const count = 800;
+  static const count = 6000;
   static final Map<int, Puzzle> _cache = {};
   static bool isHard(int level) => level % 10 == 0;
-  static int arrowCount(int level) => 30 + (level - 1) * 170 ~/ (count - 1);
+  // Preserve released boards and saved stars for levels 1–800. Later boards
+  // stay at 200 arrows, with fresh seeds and a hard puzzle every tenth level.
+  static int arrowCount(int level) =>
+      30 + (level.clamp(1, 800) - 1) * 170 ~/ 799;
   static Puzzle get(int level) {
     if (level < 1 || level > count) throw RangeError.range(level, 1, count);
     if (_cache.containsKey(level)) return _cache[level]!;

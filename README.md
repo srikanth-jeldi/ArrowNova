@@ -11,7 +11,7 @@ pending. See `mobile/ios/RELEASE.md` for the native release requirements.
 
 ## Included
 
-- 800 Classic levels and two separate guided practice rounds before Level 1.
+- 6,000 Classic levels and two separate guided practice rounds before Level 1.
 - Raised glass-style arrow paths, three hearts, hints and retry.
 - Crystal-garden victory screen, performance stars and local progress storage.
 - Garden decorations, milestone unlocks and earned-point purchases.

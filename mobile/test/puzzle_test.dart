@@ -34,7 +34,7 @@ void main() {
     expect(game.lives, 3);
     expect(game.removed, isEmpty);
   });
-  test('all 800 dense levels have unique non-overlapping connected paths and a complete solution', () {
+  test('all 6000 dense levels have unique non-overlapping connected paths and a complete solution', () {
     final fingerprints = <String>{};
     var previousCount = 0;
     for (var level = 1; level <= LevelCatalog.count; level++) {
@@ -123,9 +123,9 @@ void main() {
       );
     }
     expect(fingerprints.length, LevelCatalog.count);
-  });
-  test('800-level progression preserves late saves and exact endpoints', () {
-    expect(LevelCatalog.count, 800);
+  }, timeout: const Timeout(Duration(hours: 2)));
+  test('6000-level progression preserves late saves and exact endpoints', () {
+    expect(LevelCatalog.count, 6000);
     expect(LevelCatalog.get(1).arrows.length, 30);
     expect(LevelCatalog.get(800).arrows.length, 200);
     final saved = PlayerProgress(
@@ -136,7 +136,22 @@ void main() {
     expect(restored.completed, {500, 799, 800});
     expect(restored.bestStars[800], 3);
     expect(restored.unlocked(800), isTrue);
-    expect(() => LevelCatalog.get(801), throwsRangeError);
+    expect(restored.unlocked(801), isTrue);
+    expect(LevelCatalog.get(6000).arrows.length, 200);
+    expect(() => LevelCatalog.get(6001), throwsRangeError);
+    final extended = PlayerProgress.fromJson(
+      PlayerProgress(
+        completed: {5999, 6000},
+        bestStars: {6000: 3},
+        skipped: {5998},
+      ).toJson(),
+    );
+    expect(extended.completed, {5999, 6000});
+    expect(extended.bestStars[6000], 3);
+    expect(extended.unlocked(6000), isTrue);
+    expect(extended.skipped, {5998});
+    extended.skip(6000);
+    expect(extended.skipped.contains(6000), isFalse);
   });
   test('cached collision results agree with an independent ray scan after removals', () {
     final puzzle = LevelCatalog.get(800);

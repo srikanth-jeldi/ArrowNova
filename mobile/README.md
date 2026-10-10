@@ -19,12 +19,12 @@ and store review are separate Console steps; building a bundle does not publish 
 ## Implemented
 
 - Approved A-and-arrow logo, navy/gold UI, offline bundled fonts.
-- Home, 800-level journey, tutorial, Classic game, pause, failure and victory.
+- Home, 6,000-level journey, tutorial, Classic game, pause, failure and victory.
 - Two separate guided practice rounds before Level 1: arrow direction and clear
   exits, then blockers and a practice heart loss. Training grants no coins/stars
   or level completion. An animated hand demonstrates the highlighted arrow without
   auto-playing it. Completion is saved; Settings can replay practice.
-- Classic arrow count grows gradually from 30 to 200 across 800 levels.
+- Classic arrow count grows from 30 to 200 over the first 800 levels; levels 801–6,000 continue with new 200-arrow boards and every tenth level is hard.
   Circle, diamond, shield and leaf silhouettes mix short arrows with long straight
   runs and larger bends. Boundary-first generation guarantees a removal order;
   quality gates check shape coverage, path-length variety and dependencies. Every
@@ -71,10 +71,16 @@ This local release currently uses the existing debug signing key; Play Store
 publishing requires a dedicated upload key. Keep the key consistent for updates.
 APK download size differs from installed storage and runtime RAM use.
 
-Tests cover all 800 level solutions, path geometry/non-overlap, hearts/restart,
+Tests cover all 6,000 level solutions, path geometry/non-overlap, hearts/restart,
 safe hints, hit testing, local progress serialization, duplicate reward prevention,
 and widget flows including three wrong taps, rapid-tap suppression, restart, win and next level.
 Phone-size golden images are in `test/goldens`.
+
+For a fast full-catalog audit, compile `tool/audit_levels.dart` with
+`dart compile exe tool/audit_levels.dart -o build/audit_levels.exe`, then run
+`build/audit_levels.exe`. It checks all 6,000 boards for exact uniqueness,
+solvability, silhouette coverage, path connectivity, arrow count and hard-level
+dependencies. The 2026-10-10 audit passed all 6,000 in 4 minutes 45 seconds.
 
 ## Scope and remaining work
 

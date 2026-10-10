@@ -190,7 +190,7 @@ void main() {
                       ),
                       SizedBox(height: 35),
                       Text(
-                        '800 arrow puzzles\nA daily challenge. Your garden.',
+                        '6,000 arrow puzzles\nA daily challenge. Your garden.',
                         style: TextStyle(
                           fontFamily: 'ArrowNovaSans',
                           fontSize: 22,
