@@ -19,10 +19,18 @@ class FeedbackService {
     }
     if (sound) {
       try {
-        await (_player ??= AudioPlayer()).play(
-          AssetSource('audio/$event.wav'),
-          volume: .3,
-        );
+        if (_player == null) {
+          _player = AudioPlayer();
+          await _player!.setAudioContext(
+            AudioContext(
+              android: const AudioContextAndroid(
+                audioFocus: AndroidAudioFocus.none,
+              ),
+              iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
+            ),
+          );
+        }
+        await _player!.play(AssetSource('audio/$event.wav'), volume: .3);
       } catch (_) {
         /* Feedback must never interrupt a move. */
       }

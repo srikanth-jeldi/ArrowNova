@@ -2,9 +2,10 @@
 
 Flutter Android app and local web preview for EpitomeHub Technologies.
 
-There is currently no `ios/` project. iOS ads and local reminders are not wired;
-both native services currently run only on Android. A Mac/Xcode build and iPhone
-validation are required before claiming iOS support.
+The `ios/` runner includes native ad/reminder configuration, keychain entitlements
+and ArrowNova icons. iOS test inventory is separate from Android. A Mac/Xcode
+build, Apple signing, iPhone validation and iOS live AdMob IDs are still required
+before an App Store release. See `ios/RELEASE.md`.
 
 ## Play Store signing
 

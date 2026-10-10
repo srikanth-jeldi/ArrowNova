@@ -28,3 +28,17 @@ class DailyCatalog {
     );
   }
 }
+
+/// Five deterministic, distinct hard boards per local calendar day.
+class DailyChestCatalog {
+  static int level(DateTime date, int index) {
+    RangeError.checkValueInInterval(index, 0, 4, 'index');
+    final day =
+        DateTime.utc(date.year, date.month, date.day).millisecondsSinceEpoch ~/
+        Duration.millisecondsPerDay;
+    return 410 + ((day * 7 + index * 9) % 40) * 10;
+  }
+
+  static Puzzle get(DateTime date, int index) =>
+      LevelCatalog.get(level(date, index));
+}

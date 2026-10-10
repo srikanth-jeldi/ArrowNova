@@ -19,6 +19,7 @@ class GameScreen extends StatefulWidget {
     this.startTraining = false,
     this.showHintAd,
     this.dailyDate,
+    this.chestIndex,
     required this.progress,
     required this.onComplete,
     required this.onSettingsChanged,
@@ -26,6 +27,7 @@ class GameScreen extends StatefulWidget {
   final int level;
   final bool startTraining;
   final DateTime? dailyDate;
+  final int? chestIndex;
   final Future<HintAdResult> Function()? showHintAd;
   final PlayerProgress progress;
   final void Function(int level, int stars) onComplete;
@@ -93,7 +95,9 @@ class _GameScreenState extends State<GameScreen>
       learning
           ? TrainingCatalog.get(1)
           : widget.dailyDate != null
-          ? DailyCatalog.get(widget.dailyDate!)
+          ? widget.chestIndex != null
+                ? DailyChestCatalog.get(widget.dailyDate!, widget.chestIndex!)
+                : DailyCatalog.get(widget.dailyDate!)
           : LevelCatalog.get(widget.level),
     );
     tutorial = learning;
@@ -195,7 +199,11 @@ class _GameScreenState extends State<GameScreen>
         sound('win');
         return;
       }
-      firstCompletion = widget.dailyDate != null
+      firstCompletion = widget.chestIndex != null
+          ? !widget.progress.chestStars.containsKey(
+              widget.progress.chestKey(widget.dailyDate!, widget.chestIndex!),
+            )
+          : widget.dailyDate != null
           ? !widget.progress.dailyStars.containsKey(dayKey(widget.dailyDate!))
           : !widget.progress.completed.contains(game.puzzle.level);
       widget.onComplete(
@@ -307,6 +315,60 @@ class _GameScreenState extends State<GameScreen>
     }
   }
 
+  Future<void> requestSkip() async {
+    if (busy ||
+        paused ||
+        learning ||
+        tutorial ||
+        game.won ||
+        widget.dailyDate != null ||
+        game.puzzle.level >= LevelCatalog.count) {
+      return;
+    }
+    setState(() => hintFlow = true);
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Skip this level?'),
+        content: const Text(
+          'Complete a rewarded ad to unlock the next Classic level. This level stays available to replay. Skipping gives no stars, coins or garden points.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Not now'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Watch ad to skip'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    var result = HintAdResult.dismissed;
+    if (accepted == true) {
+      try {
+        result = await (widget.showHintAd ?? GameAds.instance.showHintAd)();
+      } catch (_) {
+        result = HintAdResult.unavailable;
+      }
+    }
+    if (!mounted) return;
+    setState(() => hintFlow = false);
+    if (result == HintAdResult.earned) {
+      widget.progress.skip(game.puzzle.level);
+      widget.onSettingsChanged();
+      advanceLevel();
+    } else if (accepted == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No reward earned. This level has not been skipped.'),
+        ),
+      );
+    }
+  }
+
   void requestRestart() {
     setState(() => paused = true);
     showDialog<bool>(
@@ -353,7 +415,9 @@ class _GameScreenState extends State<GameScreen>
         moves: game.removed.length + game.mistakes,
         elapsed: playTime.elapsed,
         firstCompletion: firstCompletion,
-        dailyLabel: widget.dailyDate != null ? dayKey(widget.dailyDate!) : null,
+        dailyLabel: widget.dailyDate != null
+            ? '${dayKey(widget.dailyDate!)}${widget.chestIndex != null ? ' · CHEST ${widget.chestIndex! + 1}' : ''}'
+            : null,
         onNext:
             widget.dailyDate == null && game.puzzle.level < LevelCatalog.count
             ? next
@@ -404,7 +468,7 @@ class _GameScreenState extends State<GameScreen>
                                       learning
                                           ? 'PRACTICE $trainingRound / 2'
                                           : widget.dailyDate != null
-                                          ? 'DAILY · ${dayKey(widget.dailyDate!)}'
+                                          ? '${widget.chestIndex != null ? 'CHEST ${widget.chestIndex! + 1}/5' : 'DAILY'} · ${dayKey(widget.dailyDate!)}'
                                           : 'LEVEL ${game.puzzle.level.toString().padLeft(2, '0')}  ·  ${LevelCatalog.isHard(game.puzzle.level) ? 'HARD' : 'CLASSIC'}',
                                       style: const TextStyle(
                                         fontFamily: 'ArrowNovaSans',
@@ -672,6 +736,17 @@ class _GameScreenState extends State<GameScreen>
                                             widget.onSettingsChanged();
                                           },
                                         ),
+                                        if (!learning &&
+                                            widget.dailyDate == null &&
+                                            game.puzzle.level <
+                                                LevelCatalog.count)
+                                          BoardControl(
+                                            icon: Icons.skip_next_outlined,
+                                            label: 'Skip',
+                                            onTap: busy || overlay
+                                                ? null
+                                                : requestSkip,
+                                          ),
                                       ],
                                     ),
                                   ),

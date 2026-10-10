@@ -10,6 +10,10 @@ import '../garden/garden_catalog.dart';
 class PlayerProgress {
   PlayerProgress({
     Set<int>? completed,
+    Set<int>? skipped,
+    this.chestDay,
+    Map<String, int>? chestStars,
+    this.music = true,
     Map<String, int>? dailyStars,
     this.dailyReminders = false,
     Set<String>? owned,
@@ -20,11 +24,36 @@ class PlayerProgress {
     this.sound = true,
     this.haptics = true,
   }) : completed = completed ?? {},
+       skipped = skipped ?? {},
+       chestStars = chestStars ?? {},
        dailyStars = dailyStars ?? {},
        owned = {...?owned, 'lantern'},
        placements = placements ?? {},
        bestStars = bestStars ?? {};
   final Set<int> completed;
+  final Set<int> skipped;
+  String? chestDay;
+  final Map<String, int> chestStars;
+  bool music;
+  bool chestUnlocked(DateTime date) => chestDay == dayKey(date);
+  void unlockChest(DateTime date) => chestDay = dayKey(date);
+  String chestKey(DateTime date, int index) => '${dayKey(date)}/$index';
+  bool completeChest(DateTime date, int index, int stars) {
+    if (!chestUnlocked(date) || index < 0 || index >= 5) return false;
+    final key = chestKey(date, index);
+    final first = !chestStars.containsKey(key);
+    if (stars > (chestStars[key] ?? 0)) chestStars[key] = stars.clamp(1, 3);
+    return first;
+  }
+
+  void skip(int level) {
+    if (level >= 1 &&
+        level < LevelCatalog.count &&
+        !completed.contains(level)) {
+      skipped.add(level);
+    }
+  }
+
   final Map<String, int> dailyStars;
   bool dailyReminders;
   bool completeDaily(DateTime date, int stars) {
@@ -63,9 +92,10 @@ class PlayerProgress {
     return true;
   }
 
-  int get coins => (completed.length + dailyStars.length) * 40;
+  int get coins =>
+      (completed.length + dailyStars.length + chestStars.length) * 40;
   int get gardenPoints =>
-      (completed.length + dailyStars.length) * 10 -
+      (completed.length + dailyStars.length + chestStars.length) * 10 -
       gardenItems
           .where((i) => owned.contains(i.id))
           .fold(0, (sum, i) => sum + i.cost);
@@ -90,14 +120,21 @@ class PlayerProgress {
 
   int get nextLevel {
     for (var i = 1; i <= LevelCatalog.count; i++) {
-      if (!completed.contains(i)) return i;
+      if (!completed.contains(i) && !skipped.contains(i)) return i;
     }
     return LevelCatalog.count;
   }
 
-  bool unlocked(int level) => level == 1 || completed.contains(level - 1);
+  bool unlocked(int level) =>
+      level == 1 ||
+      completed.contains(level - 1) ||
+      skipped.contains(level - 1);
   Map<String, Object> toJson() => {
     'completed': completed.toList(),
+    'skipped': skipped.toList(),
+    'chestDay': chestDay ?? '',
+    'chestStars': chestStars,
+    'music': music,
     'dailyStars': dailyStars,
     'dailyReminders': dailyReminders,
     'trainingCompleted': trainingCompleted,
@@ -109,6 +146,23 @@ class PlayerProgress {
     'stars': bestStars.map((key, value) => MapEntry('$key', value)),
   };
   factory PlayerProgress.fromJson(Map<String, dynamic> data) => PlayerProgress(
+    skipped: (data['skipped'] as List? ?? [])
+        .whereType<int>()
+        .where((n) => n >= 1 && n < LevelCatalog.count)
+        .toSet(),
+    chestDay: data['chestDay'] is String ? data['chestDay'] as String : null,
+    chestStars: {
+      for (final entry
+          in (data['chestStars'] is Map ? data['chestStars'] as Map : {})
+              .entries)
+        if (entry.key is String &&
+            RegExp(r'^\d{4}-\d{2}-\d{2}/[0-4]$').hasMatch(entry.key) &&
+            entry.value is int &&
+            entry.value >= 1 &&
+            entry.value <= 3)
+          entry.key as String: entry.value as int,
+    },
+    music: data['music'] != false,
     completed: (data['completed'] as List? ?? [])
         .whereType<int>()
         .where((n) => n >= 1 && n <= LevelCatalog.count)

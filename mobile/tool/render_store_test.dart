@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:arrownova/app.dart';
 import 'package:arrownova/core/progress_store.dart';
 import 'package:arrownova/victory_screen.dart';
+import 'package:arrownova/daily_chest_screen.dart';
 
 void main() {
   testWidgets('render real app screens for the store', (tester) async {
@@ -97,6 +98,27 @@ void main() {
     );
     await tester.pumpAndSettle();
     await capture('screen-4-stars');
+    final chestProgress = PlayerProgress();
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: boundary,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: const Color(0xff041729),
+            fontFamily: 'ArrowNovaSerif',
+          ),
+          home: DailyChestScreen(
+            progress: chestProgress,
+            onChanged: () {},
+            now: () => DateTime(2026, 10, 10),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await capture('screen-5-chest');
   });
   testWidgets('render store branding from approved app assets', (tester) async {
     tester.view.devicePixelRatio = 1;

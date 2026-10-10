@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import 'music_service.dart';
+
 enum HintAdResult { earned, dismissed, unavailable }
 
 /// Local builds use test inventory; LIVE_ADS is an explicit publishing switch.
@@ -11,13 +13,23 @@ class GameAds {
   GameAds._();
   static final instance = GameAds._();
   static const liveAds = bool.fromEnvironment('LIVE_ADS');
-  static const bannerId = liveAds
+  static bool get ios => defaultTargetPlatform == TargetPlatform.iOS;
+  static const iosBanner = String.fromEnvironment('IOS_BANNER_ID');
+  static const iosInterstitial = String.fromEnvironment('IOS_INTERSTITIAL_ID');
+  static const iosRewarded = String.fromEnvironment('IOS_REWARDED_ID');
+  static String get bannerId => ios
+      ? (liveAds ? iosBanner : 'ca-app-pub-3940256099942544/2934735716')
+      : liveAds
       ? 'ca-app-pub-9061518700917881/4239172993'
       : 'ca-app-pub-3940256099942544/9214589741';
-  static const interstitialId = liveAds
+  static String get interstitialId => ios
+      ? (liveAds ? iosInterstitial : 'ca-app-pub-3940256099942544/4411468910')
+      : liveAds
       ? 'ca-app-pub-9061518700917881/1696855854'
       : 'ca-app-pub-3940256099942544/1033173712';
-  static const rewardedId = liveAds
+  static String get rewardedId => ios
+      ? (liveAds ? iosRewarded : 'ca-app-pub-3940256099942544/1712485313')
+      : liveAds
       ? 'ca-app-pub-9061518700917881/4798496062'
       : 'ca-app-pub-3940256099942544/5224354917';
   RewardedAd? _rewarded;
@@ -34,7 +46,15 @@ class GameAds {
   int _consentEpoch = 0;
 
   Future<void> initialize() async {
-    if (_started || kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+    if (_started ||
+        kIsWeb ||
+        (!ios && defaultTargetPlatform != TargetPlatform.android)) {
+      return;
+    }
+    // Android IDs must never be reused for an iOS release.
+    if (ios &&
+        liveAds &&
+        [iosBanner, iosInterstitial, iosRewarded].any((id) => id.isEmpty)) {
       return;
     }
     _started = true;
@@ -179,12 +199,14 @@ class GameAds {
       return HintAdResult.unavailable;
     }
     _showing = true;
+    MusicService.instance.setAd(true);
     var earned = false;
     final done = Completer<HintAdResult>();
     void finish({bool failed = false}) {
       if (done.isCompleted) return;
       ad.dispose();
       _showing = false;
+      MusicService.instance.setAd(false);
       done.complete(
         earned
             ? HintAdResult.earned
@@ -227,11 +249,13 @@ class GameAds {
       return;
     }
     _showing = true;
+    MusicService.instance.setAd(true);
     final done = Completer<void>();
     void finish() {
       if (done.isCompleted) return;
       ad.dispose();
       _showing = false;
+      MusicService.instance.setAd(false);
       done.complete();
       unawaited(preload());
     }

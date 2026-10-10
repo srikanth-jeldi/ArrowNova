@@ -28,3 +28,24 @@ for (const [name, notes, duration] of [
   }
   fs.writeFileSync(path.join(__dirname, '../assets/audio', name + '.wav'), buffer);
 }
+
+// Original 16-second seamless ambient phrase. Whole-cycle carriers and a
+// cosine envelope return to silence at each boundary without a loop click.
+{
+  const sampleRate = 22050, duration = 16, count = sampleRate * duration;
+  const buffer = Buffer.alloc(44 + count * 2);
+  buffer.write('RIFF'); buffer.writeUInt32LE(36 + count * 2, 4);
+  buffer.write('WAVEfmt ', 8); buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20); buffer.writeUInt16LE(1, 22);
+  buffer.writeUInt32LE(sampleRate, 24); buffer.writeUInt32LE(sampleRate * 2, 28);
+  buffer.writeUInt16LE(2, 32); buffer.writeUInt16LE(16, 34);
+  buffer.write('data', 36); buffer.writeUInt32LE(count * 2, 40);
+  const chords = [[261.625,329.625,392],[220,261.625,329.625],[174.625,220,261.625],[196,246.9375,293.6875]];
+  for(let i=0;i<count;i++) {
+    const t=i/sampleRate, phase=t%4, chord=chords[Math.floor(t/4)];
+    const envelope=Math.pow(Math.sin(Math.PI*phase/4),2);
+    const value=chord.reduce((sum,f)=>sum+Math.sin(2*Math.PI*f*t),0)/3;
+    buffer.writeInt16LE(Math.round(value*envelope*10000),44+i*2);
+  }
+  fs.writeFileSync(path.join(__dirname,'../assets/audio/ambient.wav'),buffer);
+}

@@ -4,9 +4,10 @@ An offline single-player Flutter arrow puzzle game by EpitomeHub Technologies.
 Levels, tutorials and garden decoration need no login or VPS. Multiplayer
 source is retained for future development but has no app entry point.
 
-Platform status: Android and web projects are present. iOS scaffolding, native
-ad/notification configuration, signing, and Mac/iPhone validation are not yet
-implemented. Shared Flutter gameplay code alone is not an iOS release.
+Platform status: Android and web builds are supported. The iOS runner now includes
+icons, keychain configuration, test ads and opt-in local reminders. iOS has not
+been compiled or tested on a Mac/iPhone; signing and App Store submission remain
+pending. See `mobile/ios/RELEASE.md` for the native release requirements.
 
 ## Included
 
@@ -16,6 +17,9 @@ implemented. Shared Flutter gameplay code alone is not an iOS release.
 - Garden decorations, milestone unlocks and earned-point purchases.
 - 30–200 arrows per level, with mixed short/long paths in four silhouette shapes.
 - Experimental duel source retained separately for future development.
+- Rewarded hints and Classic skips (skips grant no stars or currency).
+- Daily Chest: one rewarded ad unlocks five hard puzzles until local midnight.
+- Original ambient music with a separate toggle, lifecycle/ad pause, and move sounds.
 
 ## Run
 

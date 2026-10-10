@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'core/reminders.dart';
 import 'game/daily.dart';
 import 'core/ads.dart';
+import 'core/music_service.dart';
+import 'daily_chest_screen.dart';
 
 import 'package:flutter/material.dart';
 
@@ -70,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           'Device storage is unavailable. Progress lasts for this session.';
     }
     if (mounted) setState(() => loading = false);
+    MusicService.instance.setEnabled(progress.music);
     if (progress.dailyReminders) {
       unawaited(
         DailyReminders.instance.sync(true, progress.dailyStars.keys.toSet()),
@@ -140,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void save() {
     if (widget.initialProgress != null) return;
+    MusicService.instance.setEnabled(progress.music);
     final snapshot = PlayerProgress.fromJson(progress.toJson());
     _saveQueue = _saveQueue.then((_) async {
       try {
@@ -200,6 +204,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted) setState(() {});
   }
 
+  Future<void> openChest() async {
+    if (openingLevel) return;
+    openingLevel = true;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => DailyChestScreen(progress: progress, onChanged: save),
+      ),
+    );
+    openingLevel = false;
+    if (mounted) setState(() {});
+  }
+
   void levels() => showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -240,7 +256,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     final unlocked = progress.unlocked(n);
                     final done = progress.completed.contains(n);
                     return Semantics(
-                      label: 'Level $n${done ? ', completed' : ''}',
+                      label:
+                          'Level $n${done
+                              ? ', completed'
+                              : progress.skipped.contains(n)
+                              ? ', skipped, available to replay'
+                              : ''}',
                       child: OutlinedButton(
                         onPressed: unlocked
                             ? () {
@@ -280,6 +301,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     size: 13,
                                   ),
                                 ),
+                              ),
+                            if (!done && progress.skipped.contains(n))
+                              const Text(
+                                'Skipped',
+                                style: TextStyle(fontSize: 10, color: muted),
                               ),
                           ],
                         ),
@@ -377,6 +403,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 value: progress.sound,
                 onChanged: (value) {
                   update(() => progress.sound = value);
+                  save();
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Background music'),
+                subtitle: const Text('Quiet ambient loop'),
+                value: progress.music,
+                onChanged: (value) {
+                  update(() => progress.music = value);
                   save();
                 },
               ),
@@ -574,6 +609,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             ? 'Completed today · ${progress.dailyStreak(DateTime.now())} day streak'
                             : 'One puzzle today · +40 coins',
                         openDaily,
+                      ),
+                      const SizedBox(height: 14),
+                      homeTile(
+                        Icons.inventory_2_outlined,
+                        'Daily Chest',
+                        progress.chestUnlocked(DateTime.now())
+                            ? '5 hard puzzles · unlocked today'
+                            : 'Watch one ad · unlock 5 hard puzzles',
+                        openChest,
                       ),
                       const SizedBox(height: 14),
                       homeTile(

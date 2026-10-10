@@ -19,7 +19,9 @@ class DailyReminders {
   final plugin = FlutterLocalNotificationsPlugin();
   Future<bool>? _initialization;
   bool get supported =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
   Future<bool> initialize() => _initialization ??= _initialize();
   Future<bool> _initialize() async {
     if (!supported) return false;
@@ -30,6 +32,11 @@ class DailyReminders {
       await plugin.initialize(
         settings: const InitializationSettings(
           android: AndroidInitializationSettings('ic_notification'),
+          iOS: DarwinInitializationSettings(
+            requestAlertPermission: false,
+            requestBadgePermission: false,
+            requestSoundPermission: false,
+          ),
         ),
       );
       return true;
@@ -40,13 +47,23 @@ class DailyReminders {
 
   Future<bool> enable(Set<String> completed) async {
     if (!await initialize()) return false;
-    final allowed =
-        await plugin
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >()
-            ?.requestNotificationsPermission() ??
-        false;
+    final allowed = defaultTargetPlatform == TargetPlatform.iOS
+        ? await plugin
+                  .resolvePlatformSpecificImplementation<
+                    IOSFlutterLocalNotificationsPlugin
+                  >()
+                  ?.requestPermissions(
+                    alert: true,
+                    badge: false,
+                    sound: true,
+                  ) ??
+              false
+        : await plugin
+                  .resolvePlatformSpecificImplementation<
+                    AndroidFlutterLocalNotificationsPlugin
+                  >()
+                  ?.requestNotificationsPermission() ??
+              false;
     if (!allowed) return false;
     return sync(true, completed);
   }
@@ -83,6 +100,10 @@ class DailyReminders {
             next.hour,
           ),
           notificationDetails: const NotificationDetails(
+            iOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentSound: true,
+            ),
             android: AndroidNotificationDetails(
               'daily_challenge',
               'Daily challenge reminders',
