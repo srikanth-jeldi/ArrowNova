@@ -1,42 +1,51 @@
-# iOS release status
+# ArrowNova iOS release
 
-Native runner prepared on Windows; no claim of a successful iOS build or device test.
-Bundle ID: `com.epitomehub.arrownova`. Minimum iOS 15.0. Version 0.2.2 (4).
+Read the [Mac handover document](../../docs/ArrowNova-iOS-Mac-Handover.docx)
+in order. It covers account access, Mac setup, signing, physical-device checks,
+IPA export, TestFlight, iOS advertising, store submission and troubleshooting.
 
-## On the release Mac
+Current source: **0.2.10+12**. Bundle ID: `com.epitomehub.arrownova`.
+Minimum deployment target: iOS 15.0. Flutter baseline: 3.47.4 / Dart 3.13.3.
 
-1. Install a supported Flutter SDK, Xcode and CocoaPods; run `flutter doctor` and
-   `flutter pub get` in `mobile`. Run `pod install` inside `ios` if required by Flutter.
-2. Open `Runner.xcworkspace`, choose the owner's Apple Developer team for Runner,
-   and verify Keychain Sharing/signing entitlements. Reserve the same bundle ID in
-   App Store Connect and create the app record.
-3. Run on a real iPhone with test ads first. Verify consent, rewarded hint/skip/chest,
-   background/foreground music, silent switch, haptics and opt-in 9/13/19 reminders.
-   Test midnight rollover and saved progress after restart. No background audio mode
-   is enabled; notifications are local and do not require an APNs server.
-4. Create a separate iOS app and banner/interstitial/rewarded units in AdMob.
-   Android ad IDs MUST NOT be reused. Configure the iOS consent message.
-5. Put `ADMOB_APP_ID=your-ios-app-id` in ignored `Flutter/Ads.local.xcconfig`.
-   Add all applicable SKAdNetwork IDs from Google's current integration documentation.
-   The checked-in app ID and ad units are Google's test configuration.
-6. Build with `flutter build ipa --release --dart-define=LIVE_ADS=true
-   --dart-define=IOS_BANNER_ID=... --dart-define=IOS_INTERSTITIAL_ID=...
-   --dart-define=IOS_REWARDED_ID=...`. Missing live IDs disable ad initialization.
-   Verify the archived Info.plist contains the real iOS AdMob app ID before upload.
-7. Review the archive's privacy manifest/report and complete App Store privacy,
-   age rating and export compliance declarations accurately. This build does not
-   request ATT or IDFA access. Do not declare tracking permissions without wiring
-   the consent/ATT flow. Check current SDK behavior and App Store policies.
-8. Upload to TestFlight, finish device testing, then submit for Apple review.
+## Validation status
 
-## Reward behavior
+The release helper tests, shell syntax, plist parsing, icon format and Flutter
+analysis passed on Windows. A native Xcode archive, Apple signing and physical
+iPhone run have **not** been verified. Complete the Mac guide before release.
 
-Hint ads are required outside practice, including levels above 50. Every tenth
-Classic level already uses the harder dependency rules. Skip is Classic-only,
-excludes level 6000 and awards no completion, stars, coins or garden points.
-Skipped puzzles remain playable. Daily Chest unlocks five distinct hard boards
-with one rewarded ad until local midnight; regular Daily Challenge remains free.
-Reward dismissal, failure or missing inventory never grants an unlock.
+## Build on the Mac
 
-References: https://developers.google.com/admob/ios/quick-start and
-https://developers.google.com/admob/ios/test-ads
+From `mobile`, after following the guide's account and Xcode setup:
+
+```bash
+export ARROWNOVA_TEAM_ID="YOUR10CHARTEAMID"
+python3 tool/test_ios_release.py
+bash tool/build-ios.sh test "$ARROWNOVA_TEAM_ID" 13
+```
+
+Replace the placeholder with the owner's actual 10-character Apple Team ID.
+Use an unused build number; 13 is an example. The helper checks for an iOS SDK
+of at least 26, prepares signing and test-ad configuration, builds the archive
+and IPA, and verifies the archived bundle and AdMob app ID. It does not upload.
+
+For a live-ad candidate, create separate **iOS** AdMob app/unit IDs, copy
+`ads.ios.example.json` to ignored `ads.ios.local.json`, fill all four values, then:
+
+```bash
+bash tool/build-ios.sh store "$ARROWNOVA_TEAM_ID" 14
+```
+
+Do not reuse Android IDs. Keep local signing/ad configuration, certificates and
+generated archives out of Git. Save the IPA, archive and dSYMs before rebuilding.
+See the guide for upload, consent, privacy and final submission steps.
+
+## Device checks
+
+Test launch, both practice rounds, levels 5–7, dense arrow touch targets, all
+three hearts, error and victory sounds, mute/silent mode, progress persistence,
+garden, consent and rewarded-ad completion/failure. Test iPad layout too.
+Daily reminders and the settings sound-test panel are currently disabled.
+
+The current app has no explicit ATT request flow. Review the actual SDK data use
+and complete Apple's privacy/export declarations accurately. UMP consent alone
+does not replace ATT authorization when tracking is used.
