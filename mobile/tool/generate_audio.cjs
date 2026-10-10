@@ -18,24 +18,24 @@ for(let i=0;i<a.length;i++){
 encode(wav('clear',a),'clear');
 // Short rounded error double-pulse. No metallic harmonics, ringing or sharp attack.
 function error(a){
- for(const start of [0,.085])for(let i=0;i<rate*.065;i++){
+ for(const start of [0,.12])for(let i=0;i<rate*.09;i++){
   const t=i/rate,j=Math.floor(start*rate)+i;
-  const env=Math.pow(Math.sin(Math.PI*t/.065),2);
-  a[j]+=.25*env*(Math.sin(2*Math.PI*175*t)+.08*Math.sin(2*Math.PI*525*t));
+  const env=Math.pow(Math.sin(Math.PI*t/.09),2);
+  a[j]+=.55*env*(Math.sin(2*Math.PI*520*t)+.15*Math.sin(2*Math.PI*1040*t));
  }
 }
-// A low, brief downward heartbeat when a heart disappears.
-function heart(a,start,gain=.24){
+// A rounded midrange descent remains audible on small phone speakers.
+function heart(a,start,gain=.55){
  for(let i=0;i<rate*.24;i++){
   const t=i/rate,j=Math.floor(start*rate)+i;if(j>=a.length)break;
   const env=Math.pow(Math.sin(Math.PI*t/.24),2);
-  a[j]+=gain*env*Math.sin(2*Math.PI*(240*t-220*t*t));
+  a[j]+=gain*env*(Math.sin(2*Math.PI*(620*t-420*t*t))+.12*Math.sin(2*Math.PI*1240*t));
  }
 }
 a=new Array(Math.floor(rate*.26)).fill(0);heart(a,0);encode(wav('life_lost',a),'life_lost');
 // A single composite file guarantees error then heart-loss without player races.
-a=new Array(Math.floor(rate*.44)).fill(0);error(a);heart(a,.18);encode(wav('blocked',a),'blocked');
-a=new Array(Math.floor(rate*.7)).fill(0);error(a);heart(a,.18);heart(a,.43,.16);encode(wav('lost',a),'lost');
+a=new Array(Math.floor(rate*.57)).fill(0);error(a);heart(a,.28);encode(wav('blocked',a),'blocked');
+a=new Array(Math.floor(rate*.88)).fill(0);error(a);heart(a,.28);heart(a,.58,.5);encode(wav('lost',a),'lost');
 // Major-key victory flourish plus an actual human applause recording.
 a=new Array(Math.floor(rate*4.6)).fill(0);[[0,72],[.14,76],[.28,79],[.44,84]].forEach(([t,n])=>note(a,t,n,1.6,.30));
 execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',wav('fanfare',a),'-i',path.join(__dirname,'audio-source/applause.flac'),'-filter_complex','[1:a]aresample=44100,highpass=f=100,lowpass=f=9500,volume=1.4,afade=t=in:d=0.03,afade=t=out:st=3.3:d=0.7,adelay=280:all=1[claps];[0:a][claps]amix=inputs=2:normalize=0,alimiter=limit=0.89:level=false[mix]','-map','[mix]','-t','4.6','-codec:a','libmp3lame','-b:a','128k',path.join(out,'win.mp3')]);

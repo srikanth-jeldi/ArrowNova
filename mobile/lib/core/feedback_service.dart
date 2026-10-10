@@ -58,13 +58,15 @@ class FeedbackService {
   FeedbackService({
     FeedbackOutput? effects,
     FeedbackOutput? victory,
+    FeedbackOutput? warnings,
     void Function(bool)? onCelebration,
     this.onError,
   }) : _effects = effects ?? _AssetOutput(),
        _victory = victory ?? _AssetOutput(),
+       _warnings = warnings ?? _AssetOutput(),
        _onCelebration = onCelebration ?? MusicService.instance.setCelebrating;
   final void Function(String event, Object error)? onError;
-  final FeedbackOutput _effects, _victory;
+  final FeedbackOutput _effects, _victory, _warnings;
   final void Function(bool) _onCelebration;
   Future<void> _queue = Future.value();
   Timer? _duckTimer;
@@ -94,12 +96,16 @@ class FeedbackService {
       try {
         if (event == 'win') {
           await _effects.stop();
+          await _warnings.stop();
           _onCelebration(true);
           _duckTimer?.cancel();
           _duckTimer = Timer(const Duration(milliseconds: 4700), () {
             _onCelebration(false);
           });
           await _victory.play('audio/win.mp3', .85);
+        } else if (event == 'blocked' || event == 'lost') {
+          await _effects.stop();
+          await _warnings.play('audio/$event.mp3', .85);
         } else {
           await _effects.play('audio/$event.mp3', event == 'clear' ? .28 : .48);
         }
@@ -126,6 +132,7 @@ class FeedbackService {
         .then((_) async {
           await _effects.stop();
           await _victory.stop();
+          await _warnings.stop();
         })
         .catchError((Object error) {
           debugPrint('ArrowNova audio stop: $error');
@@ -139,6 +146,7 @@ class FeedbackService {
       stop().then((_) async {
         await _effects.dispose();
         await _victory.dispose();
+        await _warnings.dispose();
       }),
     );
   }

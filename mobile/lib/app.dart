@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'sound_check.dart';
-
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:url_launcher/url_launcher.dart';
@@ -97,11 +95,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     if (mounted) setState(() => loading = false);
     MusicService.instance.setEnabled(progress.music);
-    if (progress.dailyReminders) {
-      unawaited(
-        DailyReminders.instance.sync(true, progress.dailyStars.keys.toSet()),
-      );
-    }
+    progress.dailyReminders = false;
+    unawaited(
+      DailyReminders.instance.sync(false, progress.dailyStars.keys.toSet()),
+    );
+    save();
   }
 
   @override
@@ -281,38 +279,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       : const SizedBox.shrink(),
                 ),
                 const Text('Make it yours', style: TextStyle(fontSize: 27)),
-                SwitchListTile(
-                  title: const Text('Daily reminders'),
-                  subtitle: const Text('9 AM · 1 PM · 7 PM (phone time)'),
-                  value: progress.dailyReminders,
-                  onChanged: (enabled) async {
-                    bool ok;
-                    if (enabled) {
-                      ok = await DailyReminders.instance.enable(
-                        progress.dailyStars.keys.toSet(),
-                      );
-                    } else {
-                      ok = await DailyReminders.instance.sync(
-                        false,
-                        progress.dailyStars.keys.toSet(),
-                      );
-                    }
-                    if (!mounted) return;
-                    progress.dailyReminders = enabled && ok;
-                    save();
-                    if (context.mounted) update(() {});
-                    setState(() {});
-                    if (!ok) {
-                      ScaffoldMessenger.of(this.context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Reminders could not be enabled or updated. Check Android notification settings.',
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
                 Wrap(
                   alignment: WrapAlignment.center,
                   children: [
@@ -333,14 +299,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     Navigator.pop(sheet);
                     openLevel(progress.nextLevel, training: true);
                   },
-                ),
-                TextButton.icon(
-                  icon: const Icon(Icons.volume_up_outlined),
-                  label: const Text('Test sounds'),
-                  onPressed: () => showDialog<void>(
-                    context: this.context,
-                    builder: (_) => SoundCheck(haptics: progress.haptics),
-                  ),
                 ),
                 const SizedBox(height: 16),
                 SwitchListTile(

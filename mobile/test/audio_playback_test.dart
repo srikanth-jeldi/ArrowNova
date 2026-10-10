@@ -38,6 +38,7 @@ void main() {
     final service = FeedbackService(
       effects: effects,
       victory: victory,
+      warnings: FakeOutput(),
       onCelebration: duck.add,
     );
     final clear = service.play('clear', sound: true, haptics: false);
@@ -64,6 +65,7 @@ void main() {
     final service = FeedbackService(
       effects: effects,
       victory: victory,
+      warnings: FakeOutput(),
       onCelebration: (_) {},
     );
     await service.play('win', sound: false, haptics: false);
@@ -80,17 +82,28 @@ void main() {
   test(
     'blocked and final-life errors use dedicated cues, mute suppresses both',
     () async {
-      final effects = FakeOutput(), victory = FakeOutput();
+      final effects = FakeOutput(),
+          victory = FakeOutput(),
+          warnings = FakeOutput();
       final service = FeedbackService(
         effects: effects,
         victory: victory,
+        warnings: warnings,
         onCelebration: (_) {},
       );
       await service.play('blocked', sound: true, haptics: false);
       await service.play('lost', sound: true, haptics: false);
       await service.play('blocked', sound: false, haptics: false);
       await service.play('lost', sound: false, haptics: false);
-      expect(effects.events, ['audio/blocked.mp3@0.48', 'audio/lost.mp3@0.48']);
+      expect(warnings.events, [
+        'audio/blocked.mp3@0.85',
+        'audio/lost.mp3@0.85',
+      ]);
+      expect(effects.events, ['stop', 'stop']);
+      await service.play('clear', sound: true, haptics: false);
+      expect(effects.events.last, 'audio/clear.mp3@0.28');
+      // Swiping the next arrow must not interrupt the heart-loss output.
+      expect(warnings.events.length, 2);
       expect(victory.events, isEmpty);
       service.dispose();
     },
@@ -104,6 +117,7 @@ void main() {
       final service = FeedbackService(
         effects: effects,
         victory: victory,
+        warnings: FakeOutput(),
         onCelebration: duck.add,
         onError: (event, error) => errors.add(event),
       );
