@@ -60,6 +60,9 @@ class VictoryScreen extends StatelessWidget {
                           ),
                         ),
                       ),
+                      const Positioned.fill(
+                        child: IgnorePointer(child: VictoryFireworks()),
+                      ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(24, 22, 24, 18),
                         child: Column(
@@ -240,6 +243,101 @@ class VictoryScreen extends StatelessWidget {
           side: const BorderSide(color: Color(0xFFD4DDE2)),
         ),
       );
+}
+
+/// A finite celebration behind the controls; never intercepts player input.
+class VictoryFireworks extends StatefulWidget {
+  const VictoryFireworks({super.key});
+  @override
+  State<VictoryFireworks> createState() => _VictoryFireworksState();
+}
+
+class _VictoryFireworksState extends State<VictoryFireworks>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController animation = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 3600),
+  );
+  bool started = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      animation.stop();
+      animation.value = 1;
+    } else if (!started) {
+      animation.forward();
+    }
+    started = true;
+  }
+
+  @override
+  void dispose() {
+    animation.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: CustomPaint(painter: _FireworksPainter(animation)),
+  );
+}
+
+class _FireworksPainter extends CustomPainter {
+  _FireworksPainter(this.animation) : super(repaint: animation);
+  final Animation<double> animation;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final seconds = animation.value * 3.6;
+    const centers = [Offset(.22, .32), Offset(.78, .39), Offset(.5, .29)];
+    const colors = [Color(0xffeeb84f), Color(0xff22b9ef), Color(0xffe989af)];
+    for (var burst = 0; burst < 3; burst++) {
+      // Launch and burst times match the synthesized victory track.
+      final age = seconds - (.55 + burst * .65);
+      final origin = Offset(
+        centers[burst].dx * size.width,
+        centers[burst].dy * size.height,
+      );
+      if (age >= -.4 && age < 0) {
+        final ascent = -age / .4;
+        final tip = origin + Offset(0, ascent * size.height * .25);
+        canvas.drawLine(
+          tip,
+          tip + const Offset(0, 20),
+          Paint()
+            ..color = colors[burst].withValues(alpha: .7)
+            ..strokeWidth = 2
+            ..strokeCap = StrokeCap.round,
+        );
+      }
+      if (age < 0 || age >= 1.65) continue;
+      final t = age / 1.65;
+      final radius = size.width * .27 * (1 - pow(1 - t, 3));
+      final fade = (1 - t) * .9;
+      for (var i = 0; i < 32; i++) {
+        final angle = i * pi * 2 / 32 + burst;
+        final direction = Offset(cos(angle), sin(angle));
+        final distance = radius * (.65 + (i % 5) * .08);
+        final point = origin + direction * distance + Offset(0, 48 * t * t);
+        final paint = Paint()
+          ..color = colors[(burst + i % 2) % 3].withValues(alpha: fade)
+          ..strokeWidth = 1.8
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(point - direction * (4 + 8 * (1 - t)), point, paint);
+        if (i.isEven) {
+          canvas.drawCircle(
+            point,
+            1.7 * (1 - t),
+            Paint()..color = const Color(0xffffefb6).withValues(alpha: fade),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FireworksPainter oldDelegate) =>
+      oldDelegate.animation != animation;
 }
 
 class _GoldStar extends CustomPainter {
