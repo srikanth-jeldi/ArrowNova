@@ -116,6 +116,7 @@ class _GameScreenState extends State<GameScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) unawaited(feedback.stop());
     if (state != AppLifecycleState.resumed &&
         mounted &&
         !game.won &&
@@ -219,6 +220,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void restart() => setState(() {
+    unawaited(feedback.stop());
     game.restart();
     active = null;
     blocked = false;
@@ -231,6 +233,8 @@ class _GameScreenState extends State<GameScreen>
   Future<void> next() async {
     if (changingLevel) return;
     changingLevel = true;
+    await feedback.stop();
+    if (!mounted) return;
     if (!learning &&
         !await ensureChapter(
           context,
@@ -253,6 +257,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void advanceLevel() => setState(() {
+    unawaited(feedback.stop());
     if (learning) {
       if (trainingRound == 1) {
         trainingRound = 2;

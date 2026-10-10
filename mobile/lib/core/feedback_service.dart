@@ -1,15 +1,68 @@
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-class FeedbackService {
+import 'music_service.dart';
+
+/// Separate victory output keeps the final arrow from replacing the applause.
+abstract class FeedbackOutput {
+  Future<void> play(String asset, double volume);
+  Future<void> stop();
+  Future<void> dispose();
+}
+
+class _AssetOutput implements FeedbackOutput {
   AudioPlayer? _player;
+  Future<void>? _ready;
+  Future<void> _prepare() => _ready ??= () async {
+    _player = AudioPlayer();
+    await _player!.setAudioContext(
+      AudioContext(
+        android: const AudioContextAndroid(audioFocus: AndroidAudioFocus.none),
+        iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
+      ),
+    );
+  }();
+  @override
+  Future<void> play(String asset, double volume) async {
+    await _prepare();
+    await _player!.play(AssetSource(asset), volume: volume);
+  }
+
+  @override
+  Future<void> stop() async {
+    await _player?.stop();
+  }
+
+  @override
+  Future<void> dispose() async {
+    await _player?.dispose();
+  }
+}
+
+class FeedbackService {
+  FeedbackService({
+    FeedbackOutput? effects,
+    FeedbackOutput? victory,
+    void Function(bool)? onCelebration,
+  }) : _effects = effects ?? _AssetOutput(),
+       _victory = victory ?? _AssetOutput(),
+       _onCelebration = onCelebration ?? MusicService.instance.setCelebrating;
+  final FeedbackOutput _effects, _victory;
+  final void Function(bool) _onCelebration;
+  Future<void> _queue = Future.value();
+  Timer? _duckTimer;
+  bool _disposed = false, _celebrating = false;
+  int _generation = 0;
+
   Future<void> play(
     String event, {
     required bool sound,
     required bool haptics,
-  }) async {
+  }) {
+    if (_disposed) return Future.value();
     if (haptics) {
       unawaited(
         event == 'blocked'
@@ -17,27 +70,54 @@ class FeedbackService {
             : HapticFeedback.lightImpact(),
       );
     }
-    if (sound) {
+    if (!sound || (event != 'win' && _celebrating)) return Future.value();
+    if (event == 'win') _celebrating = true;
+    final generation = _generation;
+    _queue = _queue.then((_) async {
+      if (_disposed || generation != _generation) return;
       try {
-        if (_player == null) {
-          _player = AudioPlayer();
-          await _player!.setAudioContext(
-            AudioContext(
-              android: const AudioContextAndroid(
-                audioFocus: AndroidAudioFocus.none,
-              ),
-              iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
-            ),
-          );
+        if (event == 'win') {
+          await _effects.stop();
+          _onCelebration(true);
+          _duckTimer?.cancel();
+          _duckTimer = Timer(const Duration(milliseconds: 4700), () {
+            _onCelebration(false);
+          });
+          await _victory.play('audio/win.mp3', .85);
+        } else {
+          await _effects.play('audio/$event.mp3', event == 'clear' ? .42 : .38);
         }
-        await _player!.play(AssetSource('audio/$event.wav'), volume: .3);
-      } catch (_) {
-        /* Feedback must never interrupt a move. */
+      } catch (error) {
+        debugPrint('ArrowNova audio ($event): $error');
       }
-    }
+    });
+    return _queue;
+  }
+
+  /// Stop celebrations on replay, next level, backgrounding or before an ad.
+  Future<void> stop() {
+    _generation++;
+    _celebrating = false;
+    _duckTimer?.cancel();
+    _onCelebration(false);
+    _queue = _queue
+        .then((_) async {
+          await _effects.stop();
+          await _victory.stop();
+        })
+        .catchError((Object error) {
+          debugPrint('ArrowNova audio stop: $error');
+        });
+    return _queue;
   }
 
   void dispose() {
-    if (_player != null) unawaited(_player!.dispose());
+    _disposed = true;
+    unawaited(
+      stop().then((_) async {
+        await _effects.dispose();
+        await _victory.dispose();
+      }),
+    );
   }
 }

@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 class MusicService with WidgetsBindingObserver {
   static final instance = MusicService();
   AudioPlayer? _player;
+  bool _celebrating = false;
   bool _enabled = false, _foreground = true, _ad = false, _observing = false;
   Future<void> _queue = Future.value();
   void setEnabled(bool enabled) {
@@ -15,6 +16,11 @@ class MusicService with WidgetsBindingObserver {
       _observing = true;
     }
     _enabled = enabled;
+    _sync();
+  }
+
+  void setCelebrating(bool celebrating) {
+    _celebrating = celebrating;
     _sync();
   }
 
@@ -44,8 +50,12 @@ class MusicService with WidgetsBindingObserver {
             ),
           );
           await _player!.setReleaseMode(ReleaseMode.loop);
-          await _player!.play(AssetSource('audio/ambient.wav'), volume: .10);
+          await _player!.play(
+            AssetSource('audio/ambient.mp3'),
+            volume: _celebrating ? .025 : .24,
+          );
         } else {
+          await _player!.setVolume(_celebrating ? .025 : .24);
           await _player!.resume();
         }
       } catch (_) {

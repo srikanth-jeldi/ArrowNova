@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '../build/web');
 const types = {'.html':'text/html', '.js':'text/javascript', '.json':'application/json',
- '.wasm':'application/wasm', '.png':'image/png', '.wav':'audio/wav', '.ttf':'font/ttf', '.css':'text/css'};
+ '.wasm':'application/wasm', '.png':'image/png', '.wav':'audio/wav', '.mp3':'audio/mpeg', '.ttf':'font/ttf', '.css':'text/css'};
 http.createServer((req, res) => {
   let file;
   try { file = path.resolve(root, '.' + decodeURIComponent(new URL(req.url, 'http://localhost').pathname)); }
