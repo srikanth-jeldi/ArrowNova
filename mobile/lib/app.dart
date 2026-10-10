@@ -377,21 +377,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     children: [
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(11),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFF193B54),
-                              border: Border.all(
-                                color: const Color(0xFF476478),
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.person_outline,
-                              color: gold,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
                           const Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,6 +475,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 'Your journey',
                                 '${progress.completed.length} / ${LevelCatalog.count} cleared',
                                 levels,
+                                summary: true,
                               ),
                             ),
                             const SizedBox(width: 14),
@@ -518,6 +504,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     ),
                                   );
                                 },
+                                summary: true,
                               ),
                             ),
                           ],
@@ -596,8 +583,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     IconData icon,
     String title,
     String subtitle,
-    VoidCallback onTap,
-  ) => Material(
+    VoidCallback onTap, {
+    bool summary = false,
+  }) => Material(
     color: const Color(0xFF102C46),
     borderRadius: BorderRadius.circular(22),
     child: InkWell(
@@ -614,7 +602,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             Icon(icon, color: gold, size: 29),
             const SizedBox(height: 16),
-            Text(title, style: const TextStyle(fontSize: 16)),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: summary
+                    ? 44 * MediaQuery.textScalerOf(context).scale(1)
+                    : 0,
+              ),
+              child: Text(title, style: const TextStyle(fontSize: 16)),
+            ),
             const SizedBox(height: 5),
             Text(subtitle, style: const TextStyle(fontSize: 12, color: muted)),
           ],
