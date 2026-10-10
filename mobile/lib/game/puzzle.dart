@@ -29,19 +29,46 @@ class Puzzle {
   final List<ArrowPath> arrows;
   bool contains(Cell c) => c.x >= 0 && c.y >= 0 && c.x < width && c.y < height;
 
-  bool canExit(int id, Set<int> removed) {
-    if (removed.contains(id)) return false;
-    final arrow = arrows.firstWhere((a) => a.id == id);
-    final occupied = <Cell>{
+  // Geometry is immutable. Cache blockers once instead of rebuilding every
+  // occupied cell on every tap/hint in a 200-arrow board.
+  late final Map<int, Set<int>> _blockers = _findBlockers();
+  Map<int, Set<int>> _findBlockers() {
+    final owners = <Cell, int>{
       for (final a in arrows)
-        if (a.id != id && !removed.contains(a.id)) ...a.cells,
+        for (final cell in a.cells) cell: a.id,
     };
-    var next = arrow.head + arrow.direction;
-    while (contains(next)) {
-      if (occupied.contains(next)) return false;
-      next = next + arrow.direction;
-    }
-    return true;
+    return {
+      for (final arrow in arrows)
+        arrow.id: (() {
+          final blockers = <int>{};
+          var next = arrow.head + arrow.direction;
+          while (contains(next)) {
+            final owner = owners[next];
+            if (owner != null && owner != arrow.id) blockers.add(owner);
+            next = next + arrow.direction;
+          }
+          return blockers;
+        })(),
+    };
+  }
+
+  bool canExit(int id, Set<int> removed) =>
+      !removed.contains(id) &&
+      _blockers.containsKey(id) &&
+      _blockers[id]!.every(removed.contains);
+
+  int get dependencyDepth {
+    final depths = <int, int>{};
+    int visit(int id) => depths.putIfAbsent(
+      id,
+      () =>
+          1 +
+          _blockers[id]!.fold<int>(
+            0,
+            (depth, blocker) => max(depth, visit(blocker)),
+          ),
+    );
+    return arrows.fold<int>(0, (depth, arrow) => max(depth, visit(arrow.id)));
   }
 
   List<int> solution([Set<int> removed = const {}]) {
@@ -60,16 +87,210 @@ class Puzzle {
 }
 
 class LevelCatalog {
-  static const count = 500;
+  static const count = 800;
   static final Map<int, Puzzle> _cache = {};
+  static bool isHard(int level) => level % 10 == 0;
+  static int arrowCount(int level) => 30 + (level - 1) * 170 ~/ (count - 1);
   static Puzzle get(int level) {
     if (level < 1 || level > count) throw RangeError.range(level, 1, count);
-    return _cache.putIfAbsent(level, () => _generate(level));
+    if (_cache.containsKey(level)) return _cache[level]!;
+    if (_cache.length >= 24) _cache.remove(_cache.keys.first);
+    return _cache[level] = _generate(level);
+  }
+
+  static const _directions = [Cell(1, 0), Cell(-1, 0), Cell(0, 1), Cell(0, -1)];
+
+  static String shapeName(int level) =>
+      ['Circle', 'Diamond', 'Shield', 'Leaf'][(level - 1) % 4];
+
+  static Set<Cell> silhouette(int level, int width, int height) {
+    final cells = <Cell>{};
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        final nx = (x - (width - 1) / 2) / (width / 2);
+        final ny = (y - (height - 1) / 2) / (height / 2);
+        final inside = switch ((level - 1) % 4) {
+          0 => nx * nx + ny * ny <= 1,
+          1 => nx.abs() + ny.abs() <= 1.03,
+          2 => nx.abs() <= (ny < .2 ? .92 : .92 - (ny - .2) * .9),
+          _ => nx * nx + ny * ny + .45 * nx * ny <= .95,
+        };
+        if (inside) cells.add(Cell(x, y));
+      }
+    }
+    return cells;
   }
 
   static Puzzle _generate(int level) {
-    // Hand-authored lessons: clear exits, a blocker, then a dependency chain.
-    if (level <= 3) {
+    final random = Random(7429 + level * 101);
+    final target = arrowCount(level);
+    final fill = (level - 1) % 4 == 1 ? .52 : .78;
+    final width = sqrt(target * 10 / (fill * 1.2)).ceil();
+    final height = (width * 1.2).round();
+    final mask = silhouette(level, width, height);
+    Puzzle? best;
+    var bestScore = -double.infinity;
+    for (var attempt = 0; attempt < 32; attempt++) {
+      final free = {...mask};
+      final arrows = <ArrowPath>[];
+      while (arrows.length < target) {
+        // Isolated single cells cannot form an arrow. Drop these small crumbs
+        // rather than drawing misleading one-point paths.
+        free.removeAll(
+          free
+              .where((c) => !_directions.any((d) => free.contains(c + d)))
+              .toList(),
+        );
+        final left = target - arrows.length;
+        if (free.length < left * 2) break;
+        final rowMin = List.filled(height, width),
+            rowMax = List.filled(height, -1);
+        final colMin = List.filled(width, height),
+            colMax = List.filled(width, -1);
+        for (final c in free) {
+          rowMin[c.y] = min(rowMin[c.y], c.x);
+          rowMax[c.y] = max(rowMax[c.y], c.x);
+          colMin[c.x] = min(colMin[c.x], c.y);
+          colMax[c.x] = max(colMax[c.x], c.y);
+        }
+        final heads = <(Cell, Cell)>[];
+        for (var y = 0; y < height; y++) {
+          for (final (x, d) in [
+            (rowMin[y], const Cell(-1, 0)),
+            (rowMax[y], const Cell(1, 0)),
+          ]) {
+            final c = Cell(x, y);
+            if (free.contains(c) && free.contains(c - d)) heads.add((c, d));
+          }
+        }
+        for (var x = 0; x < width; x++) {
+          for (final (y, d) in [
+            (colMin[x], const Cell(0, -1)),
+            (colMax[x], const Cell(0, 1)),
+          ]) {
+            final c = Cell(x, y);
+            if (free.contains(c) && free.contains(c - d)) heads.add((c, d));
+          }
+        }
+        if (heads.isEmpty) break;
+        heads.shuffle(random);
+        if (isHard(level)) {
+          heads.sort(
+            (a, b) => (mask.contains(b.$1 + b.$2) ? 1 : 0).compareTo(
+              mask.contains(a.$1 + a.$2) ? 1 : 0,
+            ),
+          );
+        }
+        final average = free.length / left;
+        final category = arrows.length % 5;
+        final wanted =
+            (category == 0
+                    ? 3 + random.nextInt(2)
+                    : category == 1
+                    ? average * (3.3 + random.nextDouble())
+                    : average * (.7 + random.nextDouble() * .6))
+                .round()
+                .clamp(2, min(64, free.length - 2 * (left - 1)));
+        List<Cell>? chosen;
+        var pathScore = -double.infinity;
+        for (final (head, direction) in heads.take(24)) {
+          final path = [head, head - direction];
+          final used = path.toSet();
+          var heading = Cell(-direction.x, -direction.y);
+          var run = 1;
+          var turns = 0;
+          while (path.length < wanted) {
+            final options = _directions
+                .where(
+                  (d) =>
+                      free.contains(path.last + d) &&
+                      !used.contains(path.last + d),
+                )
+                .toList();
+            if (options.isEmpty) break;
+            final straight = options.contains(heading);
+            Cell nextDirection;
+            if (straight && (run < 3 || random.nextDouble() < .8)) {
+              nextDirection = heading;
+            } else {
+              final bends = options.where((d) => d != heading).toList();
+              if (bends.isEmpty) {
+                nextDirection = heading;
+              } else if (run < 2 && path.length > 2) {
+                break;
+              } else {
+                nextDirection = bends[random.nextInt(bends.length)];
+              }
+            }
+            if (nextDirection != heading) {
+              turns++;
+              run = 0;
+            }
+            if (turns > 5) break;
+            heading = nextDirection;
+            run++;
+            path.add(path.last + heading);
+            used.add(path.last);
+          }
+          final score =
+              (mask.contains(head + direction)
+                  ? (isHard(level) ? 2.0 : .5)
+                  : 0) -
+              (path.length - wanted).abs().toDouble() -
+              turns * .12 +
+              random.nextDouble() * .2;
+          if (score > pathScore) {
+            chosen = path;
+            pathScore = score;
+          }
+        }
+        if (chosen == null) break;
+        arrows.add(ArrowPath(arrows.length, chosen.reversed.toList()));
+        free.removeAll(chosen);
+      }
+      if (arrows.length != target) continue;
+      final candidate = Puzzle(level, width, height, arrows);
+      final coverage =
+          arrows.fold<int>(0, (sum, a) => sum + a.cells.length) / mask.length;
+      final short = arrows.where((a) => a.cells.length <= 4).length;
+      final long = arrows.where((a) => a.cells.length >= 18).length;
+      final blocked =
+          arrows.where((a) => !candidate.canExit(a.id, {})).length / target;
+      final depth = candidate.dependencyDepth;
+      if (coverage < .80 ||
+          short < (target * .12).floor() ||
+          long < 2 ||
+          !arrows.any((a) => a.cells.length >= 24) ||
+          blocked < (isHard(level) ? .7 : .4) ||
+          (isHard(level) && depth < 8)) {
+        continue;
+      }
+      final score =
+          (isHard(level) ? depth * 1.5 : 0) +
+          coverage * 100 +
+          min(short, target * .2) +
+          min(long, target * .12) * 2 +
+          blocked * (isHard(level) ? 20 : 4);
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+      }
+      if (coverage >= .87 &&
+          short >= target * .15 &&
+          long >= max(2, target * .08) &&
+          blocked >= (isHard(level) ? .75 : .4)) {
+        break;
+      }
+    }
+    if (best == null) throw StateError('Could not build level $level');
+    return best;
+  }
+}
+
+class TrainingCatalog {
+  static Puzzle get(int level) {
+    // Two separate practice boards: clear exits, then a blocker.
+    if (level >= 1 && level <= 2) {
       final paths = level == 1
           ? [
               [const Cell(1, 3), const Cell(1, 2), const Cell(2, 2)],
@@ -79,8 +300,6 @@ class LevelCatalog {
           : [
               [const Cell(1, 4), const Cell(1, 3), const Cell(2, 3)],
               [const Cell(4, 4), const Cell(4, 3), const Cell(4, 2)],
-              if (level == 3)
-                [const Cell(3, 1), const Cell(4, 1), const Cell(5, 1)],
               [const Cell(2, 6), const Cell(1, 6), const Cell(1, 5)],
               [const Cell(5, 5), const Cell(5, 6), const Cell(6, 6)],
             ];
@@ -88,56 +307,7 @@ class LevelCatalog {
         for (var i = 0; i < paths.length; i++) ArrowPath(i, paths[i]),
       ]);
     }
-    const directions = [Cell(1, 0), Cell(-1, 0), Cell(0, 1), Cell(0, -1)];
-    final random = Random(7429 + level * 101);
-    final width = level <= 5 ? 9 : 11;
-    final height = level <= 5 ? 11 : 13;
-    final target = 10 + min(level, 22);
-    Puzzle? best;
-    // Only retain paths removable by a complete solver pass. Removing a
-    // cyclic remainder cannot invalidate the retained solution order.
-    for (var attempt = 0; attempt < 30; attempt++) {
-      final used = <Cell>{};
-      final arrows = <ArrowPath>[];
-      for (var trial = 0; trial < 500 && arrows.length < target; trial++) {
-        final start = Cell(random.nextInt(width), random.nextInt(height));
-        if (used.contains(start)) continue;
-        final cells = [start];
-        final length = 3 + random.nextInt(level <= 5 ? 4 : 7);
-        for (var step = 1; step < length; step++) {
-          final options = directions
-              .map((d) => cells.last + d)
-              .where(
-                (c) =>
-                    c.x >= 0 &&
-                    c.y >= 0 &&
-                    c.x < width &&
-                    c.y < height &&
-                    !used.contains(c) &&
-                    !cells.contains(c),
-              )
-              .toList();
-          if (options.isEmpty) break;
-          cells.add(options[random.nextInt(options.length)]);
-        }
-        if (cells.length < 3) continue;
-        used.addAll(cells);
-        arrows.add(ArrowPath(arrows.length, cells));
-      }
-      final candidate = Puzzle(level, width, height, arrows);
-      final solved = candidate.solution().toSet();
-      final valid = Puzzle(
-        level,
-        width,
-        height,
-        arrows.where((a) => solved.contains(a.id)).toList(),
-      );
-      if (best == null || valid.arrows.length > best.arrows.length) {
-        best = valid;
-      }
-      if (valid.arrows.length >= target - 2) break;
-    }
-    return best!;
+    throw RangeError.range(level, 1, 2);
   }
 }
 

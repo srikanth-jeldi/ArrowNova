@@ -45,3 +45,23 @@ behavior on the selected host before calling it publicly available.
 
 Integration tests exercise real sockets, private rooms, invalid codes, identical boards,
 score authority, duplicate/late taps, reconnect, matchmaking, disconnect forfeits and draws.
+
+## Isolated VPS pilot (not deployed)
+
+`compose.pilot.yml` defines a separate `arrownova` Compose project. It has no
+ChessVerse networks, volumes, database connections or Docker socket mounts. It binds
+only host loopback port 8788 and applies an initial 0.5 CPU / 512 MiB memory cap,
+64-process limit, capped logs, non-root user and read-only filesystem. These limits
+are a starting point for testing, not a measured capacity or a no-crash guarantee.
+
+Use a prebuilt image via ARROWNOVA_IMAGE; do not compile images on the live shared
+VPS during peak traffic. This configuration has not been validated on that VPS.
+Before starting it, inspect actual memory availability, peak CPU, existing container
+limits/health, OOM events and whether port 8788 is free. Record ChessVerse health
+before and during the pilot. Stop only the ArrowNova service if ChessVerse health
+or latency degrades. Do not run a shared Compose down, Docker prune, server reboot,
+or change ChessVerse containers to deploy ArrowNova.
+
+Public routing is intentionally absent. Inspect the existing reverse proxy first,
+then add a separate hostname and validate its configuration before a graceful reload.
+Resource limits reduce contention but cannot eliminate shared-host or proxy risks.

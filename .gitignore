@@ -8,6 +8,9 @@ key.properties
 local.properties
 *.pem
 *.key
+# Local account-console proof; not application source.
+design/previews/admob-*.png
+design/previews/play-*.png
 
 # Generated output and local tools
 *.log
@@ -17,6 +20,7 @@ local.properties
 **/build/
 **/.dart_tool/
 **/.gradle/
+**/.kotlin/
 **/.build-tmp/
 **/node_modules/
 **/coverage/

@@ -9,6 +9,7 @@ class VictoryScreen extends StatelessWidget {
   const VictoryScreen({
     super.key,
     required this.level,
+    this.dailyLabel,
     required this.stars,
     required this.moves,
     required this.elapsed,
@@ -18,6 +19,7 @@ class VictoryScreen extends StatelessWidget {
     required this.onHome,
   });
   final int level, stars, moves;
+  final String? dailyLabel;
   final Duration elapsed;
   final bool firstCompletion;
   final VoidCallback onNext, onReplay, onHome;
@@ -83,27 +85,7 @@ class VictoryScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 18),
-                            Semantics(
-                              label: '$stars of 3 stars earned',
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(
-                                  3,
-                                  (i) => Padding(
-                                    padding: EdgeInsets.only(
-                                      top: i == 1 ? 0 : 22,
-                                    ),
-                                    child: CustomPaint(
-                                      size: Size(
-                                        i == 1 ? 84 : 66,
-                                        i == 1 ? 84 : 66,
-                                      ),
-                                      painter: _GoldStar(i < stars),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                            StarCelebration(stars: stars),
                             const Spacer(),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -161,7 +143,9 @@ class VictoryScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 14),
                             GoldButton(
-                              label: level < LevelCatalog.count
+                              label: dailyLabel != null
+                                  ? 'Back to home'
+                                  : level < LevelCatalog.count
                                   ? 'Next level'
                                   : 'Journey complete',
                               icon: Icons.chevron_right,
@@ -189,7 +173,9 @@ class VictoryScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 14),
                             Text(
-                              'LEVEL ${level.toString().padLeft(2, '0')} COMPLETE',
+                              dailyLabel != null
+                                  ? 'DAILY $dailyLabel COMPLETE'
+                                  : 'LEVEL ${level.toString().padLeft(2, '0')} COMPLETE',
                               style: const TextStyle(
                                 fontFamily: 'ArrowNovaSans',
                                 color: Color(0xFF51687C),
@@ -301,4 +287,155 @@ class _GoldStar extends CustomPainter {
   @override
   bool shouldRepaint(covariant _GoldStar oldDelegate) =>
       oldDelegate.earned != earned;
+}
+
+class StarCelebration extends StatefulWidget {
+  const StarCelebration({super.key, required this.stars});
+  final int stars;
+  @override
+  State<StarCelebration> createState() => _StarCelebrationState();
+}
+
+class _StarCelebrationState extends State<StarCelebration>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController reveal = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  );
+  bool started = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      reveal.value = 1;
+    } else if (!started) {
+      reveal.forward();
+    }
+    started = true;
+  }
+
+  @override
+  void didUpdateWidget(covariant StarCelebration oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.stars != widget.stars) {
+      if (MediaQuery.disableAnimationsOf(context)) {
+        reveal.value = 1;
+      } else {
+        reveal.forward(from: 0);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    reveal.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: '${widget.stars} of 3 stars earned',
+    child: SizedBox(
+      width: 300,
+      height: 128,
+      child: AnimatedBuilder(
+        animation: reveal,
+        builder: (_, _) => Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            if (widget.stars == 3)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    key: const ValueKey('perfect-star-burst'),
+                    painter: _StarBurst(reveal.value),
+                  ),
+                ),
+              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(3, (i) {
+                final earned = i < widget.stars;
+                final phase = ((reveal.value - (.06 + i * .19)) / .25).clamp(
+                  0.0,
+                  1.0,
+                );
+                final scale = Curves.easeOutBack.transform(phase);
+                final size = Size.square(i == 1 ? 84 : 66);
+                return Padding(
+                  padding: EdgeInsets.only(top: i == 1 ? 0 : 22),
+                  child: Stack(
+                    children: [
+                      CustomPaint(size: size, painter: _GoldStar(false)),
+                      if (earned)
+                        Opacity(
+                          opacity: phase.clamp(0.0, 1.0),
+                          child: Transform.rotate(
+                            angle: (1 - phase) * (i.isEven ? -.22 : .22),
+                            child: Transform.scale(
+                              key: ValueKey('earned-star-$i'),
+                              scale: max(.01, scale),
+                              child: CustomPaint(
+                                size: size,
+                                painter: _GoldStar(true),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _StarBurst extends CustomPainter {
+  _StarBurst(this.progress);
+  final double progress;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = ((progress - .67) / .33).clamp(0.0, 1.0);
+    if (t <= 0 || t >= 1) return;
+    final center = Offset(size.width / 2, size.height * .45);
+    for (var i = 0; i < 38; i++) {
+      final angle = i * 2.39996;
+      final distance = (30 + (i % 7) * 12) * Curves.easeOut.transform(t);
+      final point =
+          center +
+          Offset(
+            cos(angle) * distance,
+            sin(angle) * distance * .65 + 35 * t * t,
+          );
+      final paint = Paint()
+        ..color = [
+          const Color(0xFFFFCF52),
+          const Color(0xFFFFEAAC),
+          const Color(0xFF42CFFF),
+        ][i % 3].withValues(alpha: (1 - t) * .95);
+      final r = (2 + i % 3) * (1 - t * .4);
+      canvas.save();
+      canvas.translate(point.dx, point.dy);
+      canvas.rotate(angle + t * 2);
+      canvas.drawPath(
+        Path()
+          ..moveTo(0, -r * 1.6)
+          ..lineTo(r * .5, 0)
+          ..lineTo(0, r * 1.6)
+          ..lineTo(-r * .5, 0)
+          ..close(),
+        paint,
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StarBurst oldDelegate) =>
+      oldDelegate.progress != progress;
 }

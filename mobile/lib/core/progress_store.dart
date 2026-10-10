@@ -1,3 +1,5 @@
+import '../game/daily.dart';
+
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -8,23 +10,62 @@ import '../garden/garden_catalog.dart';
 class PlayerProgress {
   PlayerProgress({
     Set<int>? completed,
+    Map<String, int>? dailyStars,
+    this.dailyReminders = false,
     Set<String>? owned,
     Map<int, String>? placements,
     Map<int, int>? bestStars,
+    this.trainingCompleted = false,
+    this.levelsSinceAdBreak = 0,
     this.sound = true,
     this.haptics = true,
   }) : completed = completed ?? {},
+       dailyStars = dailyStars ?? {},
        owned = {...?owned, 'lantern'},
        placements = placements ?? {},
        bestStars = bestStars ?? {};
   final Set<int> completed;
+  final Map<String, int> dailyStars;
+  bool dailyReminders;
+  bool completeDaily(DateTime date, int stars) {
+    final key = dayKey(date);
+    final first = !dailyStars.containsKey(key);
+    if (stars > (dailyStars[key] ?? 0)) dailyStars[key] = stars;
+    return first;
+  }
+
+  int dailyStreak(DateTime today) {
+    var date = DateTime(today.year, today.month, today.day);
+    if (!dailyStars.containsKey(dayKey(date))) {
+      date = DateTime(date.year, date.month, date.day - 1);
+    }
+    var streak = 0;
+    while (dailyStars.containsKey(dayKey(date))) {
+      streak++;
+      date = DateTime(date.year, date.month, date.day - 1);
+    }
+    return streak;
+  }
+
   final Set<String> owned;
   final Map<int, String> placements;
   final Map<int, int> bestStars;
   bool sound, haptics;
-  int get coins => completed.length * 40;
+  bool trainingCompleted;
+  int levelsSinceAdBreak;
+  void recordAdCompletion() {
+    levelsSinceAdBreak = (levelsSinceAdBreak + 1).clamp(0, 3);
+  }
+
+  bool consumeAdBreak() {
+    if (levelsSinceAdBreak < 3) return false;
+    levelsSinceAdBreak = 0;
+    return true;
+  }
+
+  int get coins => (completed.length + dailyStars.length) * 40;
   int get gardenPoints =>
-      completed.length * 10 -
+      (completed.length + dailyStars.length) * 10 -
       gardenItems
           .where((i) => owned.contains(i.id))
           .fold(0, (sum, i) => sum + i.cost);
@@ -57,6 +98,10 @@ class PlayerProgress {
   bool unlocked(int level) => level == 1 || completed.contains(level - 1);
   Map<String, Object> toJson() => {
     'completed': completed.toList(),
+    'dailyStars': dailyStars,
+    'dailyReminders': dailyReminders,
+    'trainingCompleted': trainingCompleted,
+    'levelsSinceAdBreak': levelsSinceAdBreak,
     'sound': sound,
     'haptics': haptics,
     'owned': owned.toList(),
@@ -68,6 +113,24 @@ class PlayerProgress {
         .whereType<int>()
         .where((n) => n >= 1 && n <= LevelCatalog.count)
         .toSet(),
+    dailyReminders: data['dailyReminders'] == true,
+    dailyStars: {
+      for (final entry
+          in (data['dailyStars'] is Map ? data['dailyStars'] as Map : {})
+              .entries)
+        if (entry.key is String &&
+            RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(entry.key) &&
+            DateTime.tryParse(entry.key) != null &&
+            dayKey(DateTime.parse(entry.key)) == entry.key &&
+            entry.value is int &&
+            entry.value >= 1 &&
+            entry.value <= 3)
+          entry.key as String: entry.value as int,
+    },
+    trainingCompleted: data['trainingCompleted'] == true,
+    levelsSinceAdBreak: data['levelsSinceAdBreak'] is int
+        ? (data['levelsSinceAdBreak'] as int).clamp(0, 3)
+        : 0,
     sound: data['sound'] != false,
     haptics: data['haptics'] != false,
     owned: (data['owned'] as List? ?? [])

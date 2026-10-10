@@ -34,15 +34,32 @@ void main() {
     expect(game.lives, 3);
     expect(game.removed, isEmpty);
   });
-  test('all 500 levels have unique non-overlapping connected paths and a complete solution', () {
+  test('all 800 dense levels have unique non-overlapping connected paths and a complete solution', () {
     final fingerprints = <String>{};
+    var previousCount = 0;
     for (var level = 1; level <= LevelCatalog.count; level++) {
       final puzzle = LevelCatalog.get(level);
       expect(
         puzzle.arrows.length,
-        greaterThanOrEqualTo(level <= 3 ? 3 : 5),
+        greaterThanOrEqualTo(previousCount),
+        reason: 'Density must not drop at level $level',
+      );
+      previousCount = puzzle.arrows.length;
+      expect(
+        puzzle.arrows.length,
+        LevelCatalog.arrowCount(level),
         reason: 'Level $level',
       );
+      if (level >= 1) {
+        final blocked = puzzle.arrows
+            .where((a) => !puzzle.canExit(a.id, {}))
+            .length;
+        expect(
+          blocked,
+          greaterThanOrEqualTo((puzzle.arrows.length * .4).floor()),
+          reason: 'Level $level needs meaningful removal dependencies',
+        );
+      }
       final occupied = <Cell>{};
       for (final arrow in puzzle.arrows) {
         for (var i = 0; i < arrow.cells.length; i++) {
@@ -55,6 +72,38 @@ void main() {
           }
         }
       }
+      expect(
+        occupied.length /
+            LevelCatalog.silhouette(level, puzzle.width, puzzle.height).length,
+        greaterThanOrEqualTo(.80),
+        reason: 'Level $level must fill its silhouette',
+      );
+      if (LevelCatalog.isHard(level)) {
+        expect(
+          puzzle.arrows.where((a) => !puzzle.canExit(a.id, {})).length /
+              puzzle.arrows.length,
+          greaterThanOrEqualTo(.7),
+          reason: 'Hard level $level must require ordering',
+        );
+        expect(puzzle.dependencyDepth, greaterThanOrEqualTo(8));
+      }
+      final mask = LevelCatalog.silhouette(level, puzzle.width, puzzle.height);
+      expect(
+        occupied.every(mask.contains),
+        isTrue,
+        reason: 'Paths must follow the silhouette',
+      );
+      final lengths = puzzle.arrows.map((a) => a.cells.length).toList()..sort();
+      expect(
+        lengths.where((n) => n <= 4).length,
+        greaterThanOrEqualTo((puzzle.arrows.length * .12).floor()),
+      );
+      expect(lengths.where((n) => n >= 18).length, greaterThanOrEqualTo(2));
+      expect(
+        lengths.last,
+        greaterThanOrEqualTo(24),
+        reason: 'Level $level needs a genuinely long path',
+      );
       final solution = puzzle.solution();
       expect(
         solution.length,
@@ -74,6 +123,43 @@ void main() {
       );
     }
     expect(fingerprints.length, LevelCatalog.count);
+  });
+  test('800-level progression preserves late saves and exact endpoints', () {
+    expect(LevelCatalog.count, 800);
+    expect(LevelCatalog.get(1).arrows.length, 30);
+    expect(LevelCatalog.get(800).arrows.length, 200);
+    final saved = PlayerProgress(
+      completed: {500, 799, 800},
+      bestStars: {800: 3},
+    );
+    final restored = PlayerProgress.fromJson(saved.toJson());
+    expect(restored.completed, {500, 799, 800});
+    expect(restored.bestStars[800], 3);
+    expect(restored.unlocked(800), isTrue);
+    expect(() => LevelCatalog.get(801), throwsRangeError);
+  });
+  test('cached collision results agree with an independent ray scan after removals', () {
+    final puzzle = LevelCatalog.get(800);
+    final removed = <int>{};
+    for (final next in puzzle.solution()) {
+      final owners = <Cell, int>{
+        for (final a in puzzle.arrows)
+          if (!removed.contains(a.id))
+            for (final c in a.cells) c: a.id,
+      };
+      for (final arrow in puzzle.arrows) {
+        var expected = !removed.contains(arrow.id);
+        var cell = arrow.head + arrow.direction;
+        while (expected && puzzle.contains(cell)) {
+          if (owners.containsKey(cell) && owners[cell] != arrow.id) {
+            expected = false;
+          }
+          cell = cell + arrow.direction;
+        }
+        expect(puzzle.canExit(arrow.id, removed), expected);
+      }
+      removed.add(next);
+    }
   });
   test('hit testing ignores empty space and removed arrows', () {
     final puzzle = fixture();

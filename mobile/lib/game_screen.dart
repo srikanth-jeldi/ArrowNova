@@ -1,3 +1,6 @@
+import 'game/daily.dart';
+import 'core/ads.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -13,11 +16,17 @@ class GameScreen extends StatefulWidget {
   const GameScreen({
     super.key,
     required this.level,
+    this.startTraining = false,
+    this.showHintAd,
+    this.dailyDate,
     required this.progress,
     required this.onComplete,
     required this.onSettingsChanged,
   });
   final int level;
+  final bool startTraining;
+  final DateTime? dailyDate;
+  final Future<HintAdResult> Function()? showHintAd;
   final PlayerProgress progress;
   final void Function(int level, int stars) onComplete;
   final VoidCallback onSettingsChanged;
@@ -34,31 +43,38 @@ class _GameScreenState extends State<GameScreen>
   int? active;
   bool blocked = false, paused = false, tutorial = false;
   bool firstCompletion = false;
+  bool celebrating = false;
+  bool changingLevel = false;
+  bool hintFlow = false;
   final playTime = Stopwatch();
   int lessonStep = 0;
   int practiceMistakes = 0;
-  bool get learning => game.puzzle.level <= 3;
+  int trainingRound = 0;
+  bool get learning => trainingRound > 0;
   String get lessonTitle => switch (game.puzzle.level) {
     1 => 'Follow the arrow',
     2 => 'Protect your hearts',
     _ => 'Find the right order',
   };
-  String get lessonText => switch (game.puzzle.level) {
-    1 =>
-      game.removed.isEmpty
-          ? 'Tap the golden arrow. Its tip points to a clear exit.'
-          : 'Lovely! Now clear the other arrows. Follow each arrowhead.',
-    2 =>
-      lessonStep == 0
-          ? 'Try the golden arrow. Another path blocks its exit. This practice tap costs one heart.'
-          : lessonStep == 1
-          ? 'One heart lost. Clear the golden blocker to open the way. Three mistakes mean restart.'
-          : 'The way is open! Clear the remaining paths. Empty space never costs a heart.',
-    _ =>
-      game.removed.isEmpty
-          ? 'Clear the golden arrow first. It opens a route for another arrow.'
-          : 'Your turn! Look for an open exit. Use Hint if you need help, or pinch to zoom.',
-  };
+  String get lessonText {
+    if (trainingRound == 2 && lessonStep == 0) {
+      return 'Tap the golden arrow pointing RIGHT. Its exit is blocked: watch it bump and lose one practice heart.';
+    }
+    final id = game.hinted;
+    if (id == null) return 'Well done! You cleared every arrow.';
+    final d = game.puzzle.arrows.firstWhere((a) => a.id == id).direction;
+    final direction = d.x > 0
+        ? 'RIGHT'
+        : d.x < 0
+        ? 'LEFT'
+        : d.y > 0
+        ? 'DOWN'
+        : 'UP';
+    return trainingRound == 2 && lessonStep == 1
+        ? 'Clear this golden blocker $direction first. Then the blocked arrow can leave. Three wrong taps restart a real puzzle.'
+        : 'Tap the golden arrow. Watch it slide $direction through the clear exit.';
+  }
+
   void prepareLesson() {
     lessonStep = 0;
     practiceMistakes = 0;
@@ -67,12 +83,19 @@ class _GameScreenState extends State<GameScreen>
     }
   }
 
-  bool get busy => active != null;
+  bool get busy => active != null || celebrating || hintFlow;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    game = GameSession(LevelCatalog.get(widget.level));
+    trainingRound = widget.startTraining ? 1 : 0;
+    game = GameSession(
+      learning
+          ? TrainingCatalog.get(1)
+          : widget.dailyDate != null
+          ? DailyCatalog.get(widget.dailyDate!)
+          : LevelCatalog.get(widget.level),
+    );
     tutorial = learning;
     prepareLesson();
     animation =
@@ -114,10 +137,11 @@ class _GameScreenState extends State<GameScreen>
 
   Future<void> tap(int? id) async {
     if (busy || paused || tutorial) return;
-    if (game.puzzle.level == 2 && lessonStep < 2 && id != game.hinted) return;
+    if (learning && id != game.hinted) return;
     final result = game.tap(id);
     if (result == TapResult.ignored) return;
-    if (game.puzzle.level == 2 &&
+    if (learning &&
+        game.puzzle.level == 2 &&
         lessonStep == 0 &&
         result == TapResult.blocked) {
       practiceMistakes = 1;
@@ -140,16 +164,40 @@ class _GameScreenState extends State<GameScreen>
       return;
     }
     if (!mounted) return;
+    if (game.won && !learning && !MediaQuery.disableAnimationsOf(context)) {
+      setState(() {
+        celebrating = true;
+        active = null;
+        transform.value = Matrix4.identity();
+      });
+      animation.duration = const Duration(milliseconds: 650);
+      try {
+        await animation.forward(from: 0).orCancel;
+      } on TickerCanceled {
+        return;
+      }
+      if (!mounted) return;
+    }
     setState(() {
+      celebrating = false;
       active = null;
-      if (game.puzzle.level == 2 && lessonStep < 2) {
+      if (learning && game.puzzle.level == 2 && lessonStep < 2) {
         lessonStep++;
         game.hinted = lessonStep == 1 ? 1 : 0;
+      } else if (learning) {
+        final remaining = game.puzzle.solution(game.removed);
+        game.hinted = remaining.isEmpty ? null : remaining.first;
       }
     });
     if (game.won) {
       playTime.stop();
-      firstCompletion = !widget.progress.completed.contains(game.puzzle.level);
+      if (learning) {
+        sound('win');
+        return;
+      }
+      firstCompletion = widget.dailyDate != null
+          ? !widget.progress.dailyStars.containsKey(dayKey(widget.dailyDate!))
+          : !widget.progress.completed.contains(game.puzzle.level);
       widget.onComplete(
         game.puzzle.level,
         (3 - game.mistakes + practiceMistakes).clamp(1, 3),
@@ -169,8 +217,32 @@ class _GameScreenState extends State<GameScreen>
     prepareLesson();
     transform.value = Matrix4.identity();
   });
-  void next() => setState(() {
-    game = GameSession(LevelCatalog.get(game.puzzle.level + 1));
+  Future<void> next() async {
+    if (changingLevel) return;
+    changingLevel = true;
+    if (!learning && widget.progress.consumeAdBreak()) {
+      widget.onSettingsChanged();
+      await GameAds.instance.showAtBreak();
+    }
+    if (!mounted) return;
+    changingLevel = false;
+    advanceLevel();
+  }
+
+  void advanceLevel() => setState(() {
+    if (learning) {
+      if (trainingRound == 1) {
+        trainingRound = 2;
+        game = GameSession(TrainingCatalog.get(2));
+      } else {
+        trainingRound = 0;
+        widget.progress.trainingCompleted = true;
+        widget.onSettingsChanged();
+        game = GameSession(LevelCatalog.get(widget.level));
+      }
+    } else {
+      game = GameSession(LevelCatalog.get(game.puzzle.level + 1));
+    }
     active = null;
     blocked = false;
     firstCompletion = false;
@@ -180,6 +252,61 @@ class _GameScreenState extends State<GameScreen>
     prepareLesson();
     transform.value = Matrix4.identity();
   });
+  Future<void> requestHint() async {
+    if (busy || paused || tutorial || game.won || game.lost) return;
+    if (learning) {
+      setState(() => game.hint());
+      return;
+    }
+    if (game.hinted != null && !game.removed.contains(game.hinted)) return;
+    setState(() => hintFlow = true);
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        backgroundColor: navy,
+        title: const Text('Need a hint?'),
+        content: const Text(
+          'Watch an ad to highlight one safe arrow. The hint is awarded when the ad confirms your reward.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Not now'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Watch ad for a hint'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    var result = HintAdResult.dismissed;
+    if (accepted == true) {
+      try {
+        result = await (widget.showHintAd ?? GameAds.instance.showHintAd)();
+      } catch (_) {
+        result = HintAdResult.unavailable;
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      hintFlow = false;
+      if (result == HintAdResult.earned) game.hint();
+    });
+    if (accepted == true && result != HintAdResult.earned) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result == HintAdResult.unavailable
+                ? 'No ad available right now. Keep playing or try again later.'
+                : 'No reward earned this time. You can keep playing.',
+          ),
+        ),
+      );
+    }
+  }
+
   void requestRestart() {
     setState(() => paused = true);
     showDialog<bool>(
@@ -214,19 +341,21 @@ class _GameScreenState extends State<GameScreen>
   @override
   Widget build(BuildContext context) {
     final overlay = tutorial || paused || (!busy && (game.won || game.lost));
-    if (tutorial || paused || game.won || game.lost) {
+    if (tutorial || paused || hintFlow || game.won || game.lost) {
       playTime.stop();
     } else {
       playTime.start();
     }
-    if (game.won && !busy) {
+    if (game.won && !busy && !learning) {
       return VictoryScreen(
         level: game.puzzle.level,
         stars: (3 - game.mistakes + practiceMistakes).clamp(1, 3),
         moves: game.removed.length + game.mistakes,
         elapsed: playTime.elapsed,
         firstCompletion: firstCompletion,
-        onNext: game.puzzle.level < LevelCatalog.count
+        dailyLabel: widget.dailyDate != null ? dayKey(widget.dailyDate!) : null,
+        onNext:
+            widget.dailyDate == null && game.puzzle.level < LevelCatalog.count
             ? next
             : () => Navigator.pop(context),
         onReplay: restart,
@@ -236,6 +365,7 @@ class _GameScreenState extends State<GameScreen>
     return PopScope(
       canPop: !busy,
       child: Scaffold(
+        bottomNavigationBar: learning ? null : const GameBanner(),
         body: Atmosphere(
           child: SafeArea(
             child: Center(
@@ -271,7 +401,11 @@ class _GameScreenState extends State<GameScreen>
                                     ),
                                     const SizedBox(height: 3),
                                     Text(
-                                      'LEVEL ${game.puzzle.level.toString().padLeft(2, '0')}  ·  CLASSIC',
+                                      learning
+                                          ? 'PRACTICE $trainingRound / 2'
+                                          : widget.dailyDate != null
+                                          ? 'DAILY · ${dayKey(widget.dailyDate!)}'
+                                          : 'LEVEL ${game.puzzle.level.toString().padLeft(2, '0')}  ·  ${LevelCatalog.isHard(game.puzzle.level) ? 'HARD' : 'CLASSIC'}',
                                       style: const TextStyle(
                                         fontFamily: 'ArrowNovaSans',
                                         fontSize: 9,
@@ -328,14 +462,47 @@ class _GameScreenState extends State<GameScreen>
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 4,
                                           ),
-                                          child: Icon(
-                                            i < game.lives
-                                                ? Icons.favorite_rounded
-                                                : Icons.favorite_border_rounded,
-                                            size: 28,
-                                            color: i < game.lives
-                                                ? const Color(0xFFF34F6C)
-                                                : const Color(0xFF98A8B7),
+                                          child: Stack(
+                                            alignment: Alignment.center,
+                                            children: [
+                                              Icon(
+                                                i < game.lives
+                                                    ? Icons.favorite_rounded
+                                                    : Icons
+                                                          .favorite_border_rounded,
+                                                size: 28,
+                                                color: i < game.lives
+                                                    ? const Color(0xFFF34F6C)
+                                                    : const Color(0xFF98A8B7),
+                                              ),
+                                              if (busy &&
+                                                  blocked &&
+                                                  i == game.lives &&
+                                                  !MediaQuery.disableAnimationsOf(
+                                                    context,
+                                                  ))
+                                                Opacity(
+                                                  opacity: 1 - animation.value,
+                                                  child: Transform.translate(
+                                                    offset: Offset(
+                                                      0,
+                                                      -14 * animation.value,
+                                                    ),
+                                                    child: Transform.scale(
+                                                      scale:
+                                                          1 +
+                                                          .35 * animation.value,
+                                                      child: const Icon(
+                                                        Icons.favorite_rounded,
+                                                        size: 28,
+                                                        color: Color(
+                                                          0xFFF34F6C,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -389,7 +556,7 @@ class _GameScreenState extends State<GameScreen>
                                           child: Column(
                                             children: [
                                               Text(
-                                                'LESSON ${game.puzzle.level} OF 3 · $lessonTitle',
+                                                'PRACTICE $trainingRound OF 2 · $lessonTitle',
                                                 style: const TextStyle(
                                                   fontFamily: 'ArrowNovaSans',
                                                   fontSize: 11,
@@ -422,11 +589,16 @@ class _GameScreenState extends State<GameScreen>
                                       child: InteractiveViewer(
                                         transformationController: transform,
                                         minScale: 1,
-                                        maxScale: 2.5,
+                                        maxScale: 5,
                                         panEnabled: !busy && !overlay,
                                         scaleEnabled: !busy && !overlay,
                                         child: ArrowBoard(
                                           game: game,
+                                          celebration: celebrating
+                                              ? animation.value
+                                              : 0,
+                                          showGuide:
+                                              learning && !busy && !overlay,
                                           onTap: tap,
                                           activeId: active,
                                           blocked: blocked,
@@ -481,12 +653,11 @@ class _GameScreenState extends State<GameScreen>
                                           onTap:
                                               busy ||
                                                   overlay ||
-                                                  (game.puzzle.level == 2 &&
+                                                  (learning &&
+                                                      game.puzzle.level == 2 &&
                                                       lessonStep < 2)
                                               ? null
-                                              : () {
-                                                  setState(() => game.hint());
-                                                },
+                                              : requestHint,
                                         ),
                                         BoardControl(
                                           icon: widget.progress.sound
@@ -539,7 +710,7 @@ class _GameScreenState extends State<GameScreen>
     final title = tutorial
         ? lessonTitle
         : won
-        ? 'Beautifully solved!'
+        ? (learning ? 'Practice complete!' : 'Beautifully solved!')
         : lost
         ? 'No hearts left'
         : 'A quiet moment';
@@ -584,10 +755,12 @@ class _GameScreenState extends State<GameScreen>
           const SizedBox(height: 14),
           Text(
             tutorial
-                ? 'Lesson ${game.puzzle.level} of 3\n\n$lessonText'
+                ? 'Practice $trainingRound of 2\n\n$lessonText'
                 : won
-                ? '${game.puzzle.arrows.length} paths cleared · ${game.mistakes} mistakes\n'
-                      '${firstCompletion ? '+40 coins  ·  +10 garden points' : 'A lovely replay. First-win rewards already earned.'}'
+                ? learning
+                      ? 'Well done! Practice is separate from your levels and rewards.'
+                      : '${game.puzzle.arrows.length} paths cleared · ${game.mistakes} mistakes\n'
+                            '${firstCompletion ? '+40 coins  ·  +10 garden points' : 'A lovely replay. First-win rewards already earned.'}'
                 : lost
                 ? 'Try this puzzle again with 3 hearts.\nYour completed levels are safe.'
                 : 'Take your time. Your puzzle will be here.',
@@ -599,7 +772,11 @@ class _GameScreenState extends State<GameScreen>
             label: tutorial
                 ? "Let's play"
                 : won
-                ? (game.puzzle.level < LevelCatalog.count
+                ? (learning
+                      ? (trainingRound == 1
+                            ? 'Practice round 2'
+                            : 'Start Level ${widget.level}')
+                      : game.puzzle.level < LevelCatalog.count
                       ? 'Next level'
                       : 'Journey complete')
                 : lost

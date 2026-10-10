@@ -1,0 +1,29 @@
+# Initial pilot limits; validate live VPS headroom before starting this service.
+name: arrownova
+services:
+  duel:
+    image: ${ARROWNOVA_IMAGE:?Set ARROWNOVA_IMAGE to a prebuilt image tag}
+    restart: "on-failure:3"
+    init: true
+    user: "65534:65534"
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8788"
+    ports:
+      - "127.0.0.1:8788:8788"
+    cpus: 0.50
+    mem_limit: 512m
+    memswap_limit: 512m
+    pids_limit: 64
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"

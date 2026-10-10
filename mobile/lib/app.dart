@@ -1,3 +1,11 @@
+import 'dart:async';
+
+import 'package:url_launcher/url_launcher.dart';
+
+import 'core/reminders.dart';
+import 'game/daily.dart';
+import 'core/ads.dart';
+
 import 'package:flutter/material.dart';
 
 import 'core/progress_store.dart';
@@ -5,7 +13,6 @@ import 'game_screen.dart';
 import 'game/puzzle.dart';
 import 'ui.dart';
 import 'garden/garden_screen.dart';
-import 'duel/duel_screen.dart';
 
 class ArrowNovaApp extends StatelessWidget {
   const ArrowNovaApp({super.key, this.initialProgress});
@@ -36,15 +43,17 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final store = ProgressStore();
   PlayerProgress progress = PlayerProgress();
   bool loading = true;
+  bool openingLevel = false;
   String? storageWarning;
   Future<void> _saveQueue = Future.value();
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.initialProgress != null) {
       progress = widget.initialProgress!;
       loading = false;
@@ -61,6 +70,72 @@ class _HomeScreenState extends State<HomeScreen> {
           'Device storage is unavailable. Progress lasts for this session.';
     }
     if (mounted) setState(() => loading = false);
+    if (progress.dailyReminders) {
+      unawaited(
+        DailyReminders.instance.sync(true, progress.dailyStars.keys.toSet()),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      setState(() {});
+      if (widget.initialProgress == null && progress.dailyReminders) {
+        unawaited(
+          DailyReminders.instance.sync(true, progress.dailyStars.keys.toSet()),
+        );
+      }
+    }
+  }
+
+  Future<void> openDaily() async {
+    if (openingLevel) return;
+    openingLevel = true;
+    final today = DateTime.now();
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => GameScreen(
+          level: 1,
+          dailyDate: today,
+          progress: progress,
+          onComplete: (_, stars) {
+            progress.completeDaily(today, stars);
+            save();
+            if (widget.initialProgress == null && progress.dailyReminders) {
+              unawaited(
+                DailyReminders.instance.sync(
+                  true,
+                  progress.dailyStars.keys.toSet(),
+                ),
+              );
+            }
+          },
+          onSettingsChanged: save,
+        ),
+      ),
+    );
+    openingLevel = false;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> openHelp(String page) async {
+    final uri = Uri.parse('https://www.epitomehub.com/arrownova-$page');
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {
+      /* Show a readable fallback below. */
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(uri.toString())));
+    }
   }
 
   void save() {
@@ -80,14 +155,29 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> openLevel(int level) async {
+  Future<void> openLevel(int level, {bool training = false}) async {
+    if (openingLevel) return;
+    openingLevel = true;
+    if (!training && progress.consumeAdBreak()) {
+      save();
+      await GameAds.instance.showAtBreak();
+    }
+    if (!mounted) {
+      openingLevel = false;
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => GameScreen(
           level: level,
+          startTraining:
+              training ||
+              (!progress.trainingCompleted && progress.completed.isEmpty),
           progress: progress,
           onComplete: (completed, stars) {
-            progress.completed.add(completed);
+            if (progress.completed.add(completed)) {
+              progress.recordAdCompletion();
+            }
             if (stars > (progress.bestStars[completed] ?? 0)) {
               progress.bestStars[completed] = stars;
             }
@@ -97,6 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+    openingLevel = false;
     if (mounted) setState(() {});
   }
 
@@ -108,10 +199,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (mounted) setState(() {});
   }
-
-  void openDuel() => Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => DuelScreen(progress: progress)),
-  );
 
   void levels() => showModalBottomSheet<void>(
     context: context,
@@ -218,7 +305,72 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              ValueListenableBuilder<bool>(
+                valueListenable: GameAds.instance.privacyRequired,
+                builder: (_, required, _) => required
+                    ? TextButton(
+                        onPressed: () {
+                          Navigator.pop(sheet);
+                          GameAds.instance.privacyOptions();
+                        },
+                        child: const Text('Ad privacy choices'),
+                      )
+                    : const SizedBox.shrink(),
+              ),
               const Text('Make it yours', style: TextStyle(fontSize: 27)),
+              SwitchListTile(
+                title: const Text('Daily reminders'),
+                subtitle: const Text('9 AM · 1 PM · 7 PM (phone time)'),
+                value: progress.dailyReminders,
+                onChanged: (enabled) async {
+                  bool ok;
+                  if (enabled) {
+                    ok = await DailyReminders.instance.enable(
+                      progress.dailyStars.keys.toSet(),
+                    );
+                  } else {
+                    ok = await DailyReminders.instance.sync(
+                      false,
+                      progress.dailyStars.keys.toSet(),
+                    );
+                  }
+                  if (!mounted) return;
+                  progress.dailyReminders = enabled && ok;
+                  save();
+                  if (context.mounted) update(() {});
+                  setState(() {});
+                  if (!ok) {
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Reminders could not be enabled or updated. Check Android notification settings.',
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+              Wrap(
+                alignment: WrapAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () => openHelp('privacy'),
+                    child: const Text('Privacy policy'),
+                  ),
+                  TextButton(
+                    onPressed: () => openHelp('support'),
+                    child: const Text('Help & support'),
+                  ),
+                ],
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.school_outlined),
+                label: const Text('Practice how to play'),
+                onPressed: () {
+                  Navigator.pop(sheet);
+                  openLevel(progress.nextLevel, training: true);
+                },
+              ),
               const SizedBox(height: 16),
               SwitchListTile(
                 title: const Text('Crystal sounds'),
@@ -415,26 +567,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: homeTile(
-                              Icons.bolt,
-                              'Live Duel',
-                              '60-second rivalry',
-                              openDuel,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: homeTile(
-                              Icons.park_outlined,
-                              'Your garden',
-                              '${progress.gardenPoints} points to grow',
-                              openGarden,
-                            ),
-                          ),
-                        ],
+                      homeTile(
+                        Icons.calendar_today_outlined,
+                        'Daily challenge',
+                        progress.dailyStars.containsKey(dayKey(DateTime.now()))
+                            ? 'Completed today · ${progress.dailyStreak(DateTime.now())} day streak'
+                            : 'One puzzle today · +40 coins',
+                        openDaily,
+                      ),
+                      const SizedBox(height: 14),
+                      homeTile(
+                        Icons.park_outlined,
+                        'Your garden',
+                        '${progress.gardenPoints} points to grow',
+                        openGarden,
                       ),
                       const SizedBox(height: 25),
                       const Row(

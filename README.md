@@ -1,16 +1,21 @@
 # ArrowNova
 
-A Flutter arrow puzzle game by EpitomeHub Technologies, with a local Dart
-WebSocket service for anonymous two-player duels.
+An offline single-player Flutter arrow puzzle game by EpitomeHub Technologies.
+Levels, tutorials and garden decoration need no login or VPS. Multiplayer
+source is retained for future development but has no app entry point.
+
+Platform status: Android and web projects are present. iOS scaffolding, native
+ad/notification configuration, signing, and Mac/iPhone validation are not yet
+implemented. Shared Flutter gameplay code alone is not an iOS release.
 
 ## Included
 
-- 500 solvability-validated Classic levels and three interactive tutorial levels.
+- 800 Classic levels and two separate guided practice rounds before Level 1.
 - Raised glass-style arrow paths, three hearts, hints and retry.
 - Crystal-garden victory screen, performance stars and local progress storage.
 - Garden decorations, milestone unlocks and earned-point purchases.
-- 60-second guest duels with friend codes, matchmaking, server-validated moves,
-  reconnect handling and results.
+- 30–200 arrows per level, with mixed short/long paths in four silhouette shapes.
+- Experimental duel source retained separately for future development.
 
 ## Run
 
@@ -23,7 +28,8 @@ flutter build web --release --no-web-resources-cdn --no-wasm-dry-run
 node tool/serve.cjs
 ```
 
-Open http://127.0.0.1:8787. From the repository root, start the duel server:
+Open http://127.0.0.1:8787. Solo play needs no server.
+For multiplayer development only, from the repository root:
 
 ```powershell
 dart server/duel_server.dart
@@ -51,7 +57,7 @@ dart analyze server
 
 This is a development build. Public multiplayer hosting is not configured.
 Physical-device performance/haptics testing remains pending. Puzzle difficulty
-has not been manually curated. Daily mode, solo Time Attack, cloud accounts,
+has not been manually curated. Solo Time Attack, cloud accounts,
 and paid themes/shop are not implemented. Sessions are unranked and in-memory;
 progress and garden saves are local to each device.
 

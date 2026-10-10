@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/progress_store.dart';
 import '../ui.dart';
+import '../game/puzzle.dart';
 import 'garden_catalog.dart';
 
 class GardenScreen extends StatefulWidget {
@@ -28,7 +29,10 @@ class _GardenScreenState extends State<GardenScreen> {
   @override
   Widget build(BuildContext context) {
     final p = widget.progress;
-    final milestone = min(500, ((p.completed.length ~/ 50) + 1) * 50);
+    final milestone = min(
+      LevelCatalog.count,
+      ((p.completed.length ~/ 50) + 1) * 50,
+    );
     return Scaffold(
       appBar: AppBar(title: const Text('Your crystal garden')),
       body: Center(
@@ -42,7 +46,7 @@ class _GardenScreenState extends State<GardenScreen> {
                 style: const TextStyle(color: gold, fontSize: 27),
               ),
               Text(
-                p.completed.length >= 500
+                p.completed.length >= LevelCatalog.count
                     ? 'A complete journey. A garden of your own.'
                     : '${p.completed.length} levels cleared · Next milestone $milestone',
                 style: const TextStyle(color: muted),

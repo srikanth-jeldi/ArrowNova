@@ -1,5 +1,5 @@
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:arrownova/app.dart';
 import 'package:arrownova/core/progress_store.dart';
@@ -31,6 +31,7 @@ void main() {
       );
       await tester.pumpWidget(ArrowNovaApp(initialProgress: progress));
       await tester.pumpAndSettle();
+      expect(find.text('Live Duel'), findsNothing);
       await tester.runAsync(
         () => precacheImage(
           const AssetImage('assets/branding/logo.png'),
@@ -71,6 +72,18 @@ void main() {
       final solution = board().game.puzzle.solution();
       for (final id in solution) {
         board().onTap(id);
+        if (id == solution.last) {
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 510));
+          await tester.pump(const Duration(milliseconds: 150));
+          expect(
+            find.byKey(const ValueKey('board-golden-wave')),
+            findsOneWidget,
+          );
+          expect(find.byType(VictoryScreen), findsNothing);
+          // Completion feedback must keep input locked and reward only once.
+          board().onTap(id);
+        }
         await tester.pumpAndSettle();
       }
       expect(find.text('Beautifully solved!'), findsOneWidget);
@@ -127,7 +140,7 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets('three interactive lessons, victory, replay rewards and Home', (
+  testWidgets('two practice rounds precede Level 1 without rewards', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -137,72 +150,149 @@ void main() {
     final progress = PlayerProgress(sound: false, haptics: false);
     await tester.pumpWidget(ArrowNovaApp(initialProgress: progress));
     await tester.pumpAndSettle();
-    await tester.runAsync(
-      () => precacheImage(
-        const AssetImage('assets/art/victory-garden.png'),
-        tester.element(find.byType(HomeScreen)),
-      ),
-    );
     await tester.tap(find.text('Play now'));
     await tester.pumpAndSettle();
     ArrowBoard board() => tester.widget<ArrowBoard>(find.byType(ArrowBoard));
-    for (var level = 1; level <= 3; level++) {
-      expect(
-        find.text(
-          [
-            'Follow the arrow',
-            'Protect your hearts',
-            'Find the right order',
-          ][level - 1],
-        ),
-        findsOneWidget,
-      );
+    for (var round = 1; round <= 2; round++) {
+      expect(find.text('PRACTICE $round / 2'), findsOneWidget);
       await tester.tap(find.text("Let's play"));
       await tester.pumpAndSettle();
-      if (level == 1) {
+      if (round == 1) {
         await expectLater(
           find.byType(ArrowNovaApp),
           matchesGoldenFile('goldens/tutorial.png'),
         );
-      }
-      if (level == 2) {
+        final other = board().game.puzzle.arrows
+            .firstWhere((a) => a.id != board().game.hinted)
+            .id;
+        board().onTap(other);
+        await tester.pumpAndSettle();
+        expect(board().game.removed, isEmpty);
+      } else {
         board().onTap(null);
         expect(board().game.lives, 3);
         board().onTap(0);
+        await tester.pumpAndSettle();
+        expect(board().game.lives, 2);
         board().onTap(0);
         await tester.pumpAndSettle();
         expect(board().game.lives, 2);
-        expect(board().game.hinted, 1);
-        board().onTap(0); // Coaching prevents repeatedly losing hearts here.
-        await tester.pumpAndSettle();
-        expect(board().game.lives, 2);
       }
-      for (final id in board().game.puzzle.solution(board().game.removed)) {
-        board().onTap(id);
+      while (!board().game.won) {
+        board().onTap(board().game.hinted);
         await tester.pumpAndSettle();
       }
-      expect(find.byType(VictoryScreen), findsOneWidget);
-      expect(tester.widget<VictoryScreen>(find.byType(VictoryScreen)).stars, 3);
-      expect(progress.coins, level * 40);
-      if (level == 1) {
-        await expectLater(
-          find.byType(ArrowNovaApp),
-          matchesGoldenFile('goldens/victory.png'),
-        );
-        await tester.tap(find.text('Replay'));
-        await tester.pumpAndSettle();
-        for (final id in board().game.puzzle.solution()) {
-          board().onTap(id);
-          await tester.pumpAndSettle();
-        }
-        expect(progress.coins, 40);
-        expect(find.text('Rewards already collected'), findsOneWidget);
-      }
-      await tester.tap(find.text('Next level'));
+      expect(find.text('Practice complete!'), findsOneWidget);
+      expect(progress.completed, isEmpty);
+      expect(progress.coins, 0);
+      expect(progress.bestStars, isEmpty);
+      await tester.tap(
+        find.text(round == 1 ? 'Practice round 2' : 'Start Level 1'),
+      );
       await tester.pumpAndSettle();
     }
-    expect(board().game.puzzle.level, 4);
+    expect(progress.trainingCompleted, isTrue);
+    expect(
+      PlayerProgress.fromJson(progress.toJson()).trainingCompleted,
+      isTrue,
+    );
+    expect(board().game.puzzle.level, 1);
+    expect(board().game.puzzle.arrows.length, greaterThanOrEqualTo(20));
+    expect(board().game.lives, 3);
+    expect(find.text("Let's play"), findsNothing);
+    for (final id in board().game.puzzle.solution()) {
+      board().onTap(id);
+      await tester.pumpAndSettle();
+    }
+    expect(find.byType(VictoryScreen), findsOneWidget);
+    expect(tester.widget<VictoryScreen>(find.byType(VictoryScreen)).stars, 3);
+    expect(progress.coins, 40);
+
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue journey'));
+    await tester.pumpAndSettle();
+    expect(board().game.puzzle.level, 2);
     expect(find.text("Let's play"), findsNothing);
     expect(tester.takeException(), isNull);
+    // Stopwatch uses wall time: freeze only the visual fixture, not gameplay.
+    final theme = Theme.of(tester.element(find.byType(ArrowBoard)));
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: theme,
+        home: VictoryScreen(
+          level: 1,
+          stars: 3,
+          moves: 30,
+          elapsed: const Duration(seconds: 4),
+          firstCompletion: true,
+          onNext: () {},
+          onReplay: () {},
+          onHome: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/victory.png'),
+    );
   });
+  testWidgets(
+    'dense expert board fits phone and supports precise zoomed taps',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      for (final level in [1, 10, 100, 800]) {
+        await tester.pumpWidget(
+          ArrowNovaApp(
+            key: ValueKey(level),
+            initialProgress: PlayerProgress(
+              completed: {for (var n = 1; n < level; n++) n},
+              trainingCompleted: true,
+              sound: false,
+              haptics: false,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(level == 1 ? 'Play now' : 'Continue journey'),
+        );
+        await tester.pumpAndSettle();
+        await expectLater(
+          find.byType(ArrowNovaApp),
+          matchesGoldenFile('goldens/dense-$level.png'),
+        );
+        expect(tester.takeException(), isNull);
+      }
+      final finder = find.byType(ArrowBoard);
+      final board = tester.widget<ArrowBoard>(finder);
+      final viewer = tester.widget<InteractiveViewer>(
+        find.byType(InteractiveViewer),
+      );
+      final size = tester.getSize(finder);
+      final geometry = BoardGeometry(board.game.puzzle, size);
+      final arrow = board.game.puzzle.arrows.firstWhere(
+        (a) => board.game.puzzle.canExit(a.id, {}),
+      );
+      final point = geometry.point(arrow.head);
+      viewer.transformationController!.value = Matrix4.diagonal3Values(3, 3, 1)
+        ..setTranslationRaw(
+          size.width / 2 - point.dx * 3,
+          size.height / 2 - point.dy * 3,
+          0,
+        );
+      await tester.pumpAndSettle();
+      final render = tester.renderObject<RenderBox>(finder);
+      await tester.tapAt(render.localToGlobal(point));
+      await tester.pumpAndSettle();
+      expect(board.game.removed, {arrow.id});
+      expect(board.game.lives, 3);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
