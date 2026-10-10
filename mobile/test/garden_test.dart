@@ -6,7 +6,10 @@ import 'package:arrownova/garden/garden_screen.dart';
 
 void main() {
   test('garden unlocks, costs, ownership, moving and migration', () {
-    final old = PlayerProgress.fromJson({'completed': [1, 2, 3], 'sound': false});
+    final old = PlayerProgress.fromJson({
+      'completed': [1, 2, 3],
+      'sound': false,
+    });
     expect(old.owned, {'lantern'});
     expect(old.place('lantern', 0), isTrue);
     expect(old.buy('flowers'), isFalse);
@@ -31,20 +34,69 @@ void main() {
     loaded.placements.remove(5);
     expect(loaded.owned.contains('flowers'), isTrue);
   });
-  testWidgets('place starter decoration and render phone garden', (tester) async {
-    tester.view.physicalSize = const Size(390, 844); tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize); addTearDown(tester.view.resetDevicePixelRatio);
-    for (final font in {'ArrowNovaSerif': 'assets/fonts/CormorantGaramond.ttf', 'ArrowNovaSans': 'assets/fonts/Roboto-Regular.ttf', 'MaterialIcons': 'fonts/MaterialIcons-Regular.otf'}.entries) {
+  testWidgets('place starter decoration and render phone garden', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    for (final font in {
+      'ArrowNovaSerif': 'assets/fonts/CormorantGaramond.ttf',
+      'ArrowNovaSans': 'assets/fonts/Roboto-Regular.ttf',
+      'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
+    }.entries) {
       await (FontLoader(font.key)..addFont(rootBundle.load(font.value))).load();
     }
-    final p = PlayerProgress(); var saves = 0;
-    await tester.pumpWidget(MaterialApp(theme: ThemeData(brightness: Brightness.dark, fontFamily: 'ArrowNovaSerif'), home: GardenScreen(progress: p, onChanged: () => saves++)));
+    final p = PlayerProgress();
+    var saves = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          fontFamily: 'ArrowNovaSans',
+        ),
+        home: GardenScreen(progress: p, onChanged: () => saves++),
+      ),
+    );
+    await tester.runAsync(() async {
+      final context = tester.element(find.byType(GardenScreen));
+      await precacheImage(
+        const ResizeImage(
+          AssetImage('assets/art/garden-courtyard.webp'),
+          width: 1000,
+        ),
+        context,
+      );
+      if (!context.mounted) return;
+      await precacheImage(
+        const ResizeImage(
+          AssetImage('assets/art/garden-decorations.webp'),
+          width: 1536,
+        ),
+        context,
+      );
+    });
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Decorate garden'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Place').first);
-    await tester.tap(find.text('Place').first); await tester.pumpAndSettle();
-    expect(p.placements, {0: 'lantern'}); expect(saves, 1);
-    await tester.drag(find.byType(ListView), const Offset(0, 800)); await tester.pumpAndSettle();
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/garden.png'));
+    await tester.tap(find.text('Place').first);
+    await tester.pumpAndSettle();
+    expect(p.placements, {0: 'lantern'});
+    expect(saves, 1);
+    await tester.drag(find.byType(ListView), const Offset(0, 800));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Done decorating'));
+    await tester.tap(find.text('Done decorating'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, 800));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/garden.png'),
+    );
     expect(tester.takeException(), isNull);
   });
 }

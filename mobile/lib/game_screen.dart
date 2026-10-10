@@ -46,6 +46,7 @@ class _GameScreenState extends State<GameScreen>
   final feedback = FeedbackService();
   final transform = TransformationController();
   int? active;
+  int? queuedTap;
   bool blocked = false, paused = false, tutorial = false;
   bool firstCompletion = false;
   bool celebrating = false;
@@ -144,7 +145,21 @@ class _GameScreenState extends State<GameScreen>
   );
 
   Future<void> tap(int? id) async {
-    if (busy || paused || tutorial) return;
+    if (paused || tutorial) return;
+    if (busy) {
+      // Buffer one safe next move during an exit, never repeat a mistake or
+      // charge a heart for a tap made while another arrow was moving.
+      if (active != null &&
+          !blocked &&
+          !learning &&
+          !celebrating &&
+          !hintFlow &&
+          id != null &&
+          game.puzzle.canExit(id, game.removed)) {
+        queuedTap ??= id;
+      }
+      return;
+    }
     if (learning && id != game.hinted) return;
     final result = game.tap(id);
     if (result == TapResult.ignored) return;
@@ -164,7 +179,7 @@ class _GameScreenState extends State<GameScreen>
           ? 80
           : blocked
           ? 440
-          : 500,
+          : 300,
     );
     try {
       await animation.forward(from: 0).orCancel;
@@ -217,9 +232,13 @@ class _GameScreenState extends State<GameScreen>
       sound('win');
       setState(() {});
     }
+    final nextTap = queuedTap;
+    queuedTap = null;
+    if (!game.won && !game.lost && nextTap != null) await tap(nextTap);
   }
 
   void restart() => setState(() {
+    queuedTap = null;
     unawaited(feedback.stop());
     game.restart();
     active = null;

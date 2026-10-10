@@ -522,44 +522,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                       ),
                       const SizedBox(height: 28),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: homeTile(
-                              Icons.route_rounded,
-                              'Your journey',
-                              '${progress.completed.length} / ${LevelCatalog.count} cleared',
-                              levels,
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: homeTile(
+                                Icons.route_rounded,
+                                'Your journey',
+                                '${progress.completed.length} / ${LevelCatalog.count} cleared',
+                                levels,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: homeTile(
-                              Icons.auto_awesome,
-                              'Crystal rewards',
-                              '${progress.coins} coins earned',
-                              () {
-                                showDialog<void>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    backgroundColor: navy,
-                                    title: const Text('Your crystal rewards'),
-                                    content: Text(
-                                      '${progress.coins} coins\n${progress.gardenPoints} garden points\n\n'
-                                      'First-time level wins earn 40 coins and 10 garden points. Visit your garden to place decorations. New items unlock at journey milestones.',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('Got it'),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: homeTile(
+                                Icons.auto_awesome,
+                                'Crystal rewards',
+                                '${progress.coins} coins earned',
+                                () {
+                                  showDialog<void>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      backgroundColor: navy,
+                                      title: const Text('Your crystal rewards'),
+                                      content: Text(
+                                        '${progress.coins} coins\n${progress.gardenPoints} garden points\n\n'
+                                        'First-time level wins earn 40 coins and 10 garden points. Visit your garden to place decorations. New items unlock at journey milestones.',
                                       ),
-                                    ],
-                                  ),
-                                );
-                              },
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: const Text('Got it'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 14),
                       homeTile(

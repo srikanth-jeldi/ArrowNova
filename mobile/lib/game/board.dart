@@ -91,13 +91,35 @@ class BoardGeometry {
   );
 
   int? hit(Offset position, Set<int> removed) {
-    var nearest = step * .32;
+    // A forgiving halo around the rendered path. Nearest geometry wins even
+    // when halos overlap, so dense boards still select the intended arrow.
+    var nearest = max(10.0, min(18.0, step * .55));
     int? selected;
     for (final arrow in puzzle.arrows) {
       if (removed.contains(arrow.id)) continue;
+      final head = point(arrow.head);
+      final direction = Offset(
+        arrow.direction.x.toDouble(),
+        arrow.direction.y.toDouble(),
+      );
+      final normal = Offset(-direction.dy, direction.dx);
+      final tip = head + direction * step * .38;
+      final shoulder = head - direction * step * .16;
+      final headPath = Path()
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(
+          (shoulder + normal * step * .34).dx,
+          (shoulder + normal * step * .34).dy,
+        )
+        ..lineTo(
+          (shoulder - normal * step * .34).dx,
+          (shoulder - normal * step * .34).dy,
+        )
+        ..close();
+      if (headPath.contains(position)) return arrow.id;
       for (var i = 1; i < arrow.cells.length; i++) {
         final a = point(arrow.cells[i - 1]);
-        final b = point(arrow.cells[i]);
+        final b = i == arrow.cells.length - 1 ? tip : point(arrow.cells[i]);
         final vector = b - a;
         final projection =
             ((position - a).dx * vector.dx + (position - a).dy * vector.dy) /
