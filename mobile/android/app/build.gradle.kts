@@ -66,6 +66,7 @@ android {
 
     buildTypes {
         release {
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // Keep sideload test builds compatible; Play bundles use the upload key.
             signingConfig = signingConfigs.getByName(if (storeRelease) "upload" else "debug")
         }
