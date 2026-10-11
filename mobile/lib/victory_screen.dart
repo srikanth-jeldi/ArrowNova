@@ -97,17 +97,9 @@ class VictoryScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 5),
-                            const Text(
-                              'PUZZLES GROW HERE',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'ArrowNovaSans',
-                                color: Color(0xFFDBF6FF),
-                                fontSize: 12,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                            const SizedBox(height: 18),
+                            VictoryPraise(stars: stars),
+                            // Give the tree canopy breathing room without
+                            // moving the artwork or the bottom controls.
                             StarCelebration(stars: stars),
                             const Spacer(),
                             Container(
@@ -276,6 +268,127 @@ class VictoryScreen extends StatelessWidget {
           side: const BorderSide(color: Color(0xFFD4DDE2)),
         ),
       );
+}
+
+/// A brief, non-blocking reaction in the existing subtitle space.
+class VictoryPraise extends StatefulWidget {
+  const VictoryPraise({super.key, required this.stars});
+  final int stars;
+
+  @override
+  State<VictoryPraise> createState() => _VictoryPraiseState();
+}
+
+class _VictoryPraiseState extends State<VictoryPraise>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController reaction = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 3800),
+  );
+  bool started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      reaction.stop();
+      reaction.value = 1;
+    } else if (!started) {
+      reaction.forward();
+    }
+    started = true;
+  }
+
+  @override
+  void didUpdateWidget(covariant VictoryPraise oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.stars != widget.stars &&
+        !MediaQuery.disableAnimationsOf(context)) {
+      reaction.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    reaction.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: SizedBox(
+      height: 18,
+      child: AnimatedBuilder(
+        animation: reaction,
+        builder: (context, _) {
+          final seconds = reaction.value * 3.8;
+          final fadeIn = ((seconds - 1.6) / .25).clamp(0.0, 1.0);
+          final fadeOut = ((3.8 - seconds) / .4).clamp(0.0, 1.0);
+          final opacity = min(fadeIn, fadeOut);
+          final pulse = sin(max(0.0, seconds - 1.6) * pi * 6);
+          final (symbol, label) = switch (widget.stars) {
+            3 => ('👏', 'Perfect!'),
+            2 => ('👍', 'Well done!'),
+            _ => ('✨', 'Nice solve!'),
+          };
+          return Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Opacity(
+                opacity: 1 - opacity,
+                child: const Text(
+                  'PUZZLES GROW HERE',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'ArrowNovaSans',
+                    color: Color(0xFFDBF6FF),
+                    fontSize: 12,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+              if (opacity > 0)
+                Positioned(
+                  top: -7,
+                  child: Opacity(
+                    key: const ValueKey('victory-praise'),
+                    opacity: opacity,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ExcludeSemantics(
+                          child: Transform.rotate(
+                            angle: widget.stars == 3 ? pulse * .1 : 0,
+                            child: Transform.scale(
+                              scale: 1 + pulse * .07,
+                              child: Text(
+                                symbol,
+                                style: const TextStyle(fontSize: 24),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                        Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFFFE7A5),
+                            shadows: [Shadow(color: navy, blurRadius: 5)],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    ),
+  );
 }
 
 /// A finite celebration behind the controls; never intercepts player input.

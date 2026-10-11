@@ -28,7 +28,17 @@ void main() {
       expect(tester.binding.hasScheduledFrame, true);
       await tester.tap(find.text('Next level'));
       expect(next, 1);
+      await tester.pump(const Duration(milliseconds: 1200));
+      expect(
+        find.text(switch (stars) {
+          3 => 'Perfect!',
+          2 => 'Well done!',
+          _ => 'Nice solve!',
+        }),
+        findsOneWidget,
+      );
       await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('victory-praise')), findsNothing);
       expect(tester.binding.hasScheduledFrame, false);
       expect(find.byKey(ValueKey('earned-star-${stars - 1}')), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -46,5 +56,20 @@ void main() {
     await tester.pump();
     expect(tester.binding.hasScheduledFrame, false);
     expect(tester.takeException(), isNull);
+  });
+  testWidgets('reduced motion keeps the quiet victory subtitle', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(disableAnimations: true),
+          child: Center(child: VictoryPraise(stars: 3)),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const ValueKey('victory-praise')), findsNothing);
+    expect(tester.binding.hasScheduledFrame, false);
   });
 }
