@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:arrownova/victory_screen.dart';
+import 'package:arrownova/clapping_hands.dart';
 
 void main() {
   for (final stars in [1, 2, 3]) {
@@ -29,6 +30,11 @@ void main() {
       await tester.tap(find.text('Next level'));
       expect(next, 1);
       await tester.pump(const Duration(milliseconds: 1200));
+      expect(find.text('👏'), findsNothing);
+      expect(
+        find.byType(ClappingHands),
+        stars == 3 ? findsOneWidget : findsNothing,
+      );
       expect(
         find.text(switch (stars) {
           3 => 'Perfect!',

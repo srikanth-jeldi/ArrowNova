@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'game/puzzle.dart';
 import 'ui.dart';
+import 'clapping_hands.dart';
 
 class VictoryScreen extends StatelessWidget {
   const VictoryScreen({
@@ -327,7 +328,7 @@ class _VictoryPraiseState extends State<VictoryPraise>
           final opacity = min(fadeIn, fadeOut);
           final pulse = sin(max(0.0, seconds - 1.6) * pi * 6);
           final (symbol, label) = switch (widget.stars) {
-            3 => ('👏', 'Perfect!'),
+            3 => ('', 'Perfect!'),
             2 => ('👍', 'Well done!'),
             _ => ('✨', 'Nice solve!'),
           };
@@ -350,25 +351,28 @@ class _VictoryPraiseState extends State<VictoryPraise>
               ),
               if (opacity > 0)
                 Positioned(
-                  top: -7,
+                  top: widget.stars == 3 ? -12 : -7,
                   child: Opacity(
                     key: const ValueKey('victory-praise'),
                     opacity: opacity,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        ExcludeSemantics(
-                          child: Transform.rotate(
-                            angle: widget.stars == 3 ? pulse * .1 : 0,
-                            child: Transform.scale(
-                              scale: 1 + pulse * .07,
-                              child: Text(
-                                symbol,
-                                style: const TextStyle(fontSize: 24),
+                        if (widget.stars == 3)
+                          ClappingHands(seconds: max(0.0, seconds - 1.6))
+                        else
+                          ExcludeSemantics(
+                            child: Transform.rotate(
+                              angle: widget.stars == 3 ? pulse * .1 : 0,
+                              child: Transform.scale(
+                                scale: 1 + pulse * .07,
+                                child: Text(
+                                  symbol,
+                                  style: const TextStyle(fontSize: 24),
+                                ),
                               ),
                             ),
                           ),
-                        ),
                         const SizedBox(width: 7),
                         Text(
                           label,
