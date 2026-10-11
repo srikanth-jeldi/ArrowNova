@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import 'game/puzzle.dart';
 import 'ui.dart';
-import 'clapping_hands.dart';
 
 class VictoryScreen extends StatelessWidget {
   const VictoryScreen({
@@ -351,16 +350,14 @@ class _VictoryPraiseState extends State<VictoryPraise>
               ),
               if (opacity > 0)
                 Positioned(
-                  top: widget.stars == 3 ? -12 : -7,
+                  top: widget.stars == 3 ? 0 : -7,
                   child: Opacity(
                     key: const ValueKey('victory-praise'),
                     opacity: opacity,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (widget.stars == 3)
-                          ClappingHands(seconds: max(0.0, seconds - 1.6))
-                        else
+                        if (widget.stars != 3)
                           ExcludeSemantics(
                             child: Transform.rotate(
                               angle: widget.stars == 3 ? pulse * .1 : 0,
@@ -373,7 +370,7 @@ class _VictoryPraiseState extends State<VictoryPraise>
                               ),
                             ),
                           ),
-                        const SizedBox(width: 7),
+                        if (widget.stars != 3) const SizedBox(width: 7),
                         Text(
                           label,
                           style: const TextStyle(
