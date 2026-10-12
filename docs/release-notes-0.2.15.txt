@@ -1,0 +1,7 @@
+<en-GB>
+Keep your progress: unfinished puzzles now save cleared arrows, hearts and hints.
+Watch a rewarded ad to restore 3 hearts and continue the same puzzle.
+Earn bonus coins by completing daily challenges on consecutive days.
+Spend earned coins on new arrow colours and matching board themes.
+Hints remain available through optional rewarded ads.
+</en-GB>
