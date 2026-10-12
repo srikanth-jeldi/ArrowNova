@@ -350,6 +350,13 @@ class GameSession {
     return hinted = solution.isEmpty ? null : solution.first;
   }
 
+  /// Restore hearts while retaining cleared paths and scoring mistakes.
+  bool revive() {
+    if (!lost || won) return false;
+    lives = 3;
+    return true;
+  }
+
   void restart() {
     removed.clear();
     lives = 3;

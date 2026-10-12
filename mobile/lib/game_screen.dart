@@ -2,6 +2,7 @@ import 'game/daily.dart';
 import 'core/ads.dart';
 
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
 import 'core/chapter_gate.dart';
 import 'game/chapters.dart';
@@ -52,6 +53,8 @@ class _GameScreenState extends State<GameScreen>
   bool celebrating = false;
   bool changingLevel = false;
   bool hintFlow = false;
+  bool reviving = false;
+  String? reviveMessage;
   final playTime = Stopwatch();
   int lessonStep = 0;
   int practiceMistakes = 0;
@@ -77,7 +80,7 @@ class _GameScreenState extends State<GameScreen>
         ? 'DOWN'
         : 'UP';
     return trainingRound == 2 && lessonStep == 1
-        ? 'Clear this golden blocker $direction first. Then the blocked arrow can leave. Three wrong taps restart a real puzzle.'
+        ? 'Clear this golden blocker $direction first. Then the blocked arrow can leave. Three wrong taps use all your hearts. Restart or watch an ad to continue.'
         : 'Tap the golden arrow. Watch it slide $direction through the clear exit.';
   }
 
@@ -305,6 +308,35 @@ class _GameScreenState extends State<GameScreen>
     prepareLesson();
     transform.value = Matrix4.identity();
   });
+  Future<void> requestRevive() async {
+    if (reviving || busy || !game.lost || learning) return;
+    setState(() {
+      reviving = true;
+      reviveMessage = null;
+    });
+    var result = HintAdResult.unavailable;
+    try {
+      await feedback.stop();
+      result = await (widget.showHintAd ?? GameAds.instance.showHintAd)();
+    } catch (_) {
+      result = HintAdResult.unavailable;
+    }
+    if (!mounted) return;
+    setState(() {
+      reviving = false;
+      if (result == HintAdResult.earned) {
+        game.revive();
+        paused = false;
+        blocked = false;
+        queuedTap = null;
+      } else {
+        reviveMessage = result == HintAdResult.unavailable
+            ? 'No ad available right now. Try again or restart for free.'
+            : 'Ad not completed. Try again or restart for free.';
+      }
+    });
+  }
+
   Future<void> requestHint() async {
     if (busy || paused || tutorial || game.won || game.lost) return;
     if (learning) {
@@ -835,12 +867,18 @@ class _GameScreenState extends State<GameScreen>
                     ),
                     if (overlay)
                       Positioned.fill(
-                        child: ColoredBox(
-                          color: const Color(0x99041729),
-                          child: Center(
-                            child: SingleChildScrollView(
-                              padding: const EdgeInsets.all(26),
-                              child: buildOverlay(),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(
+                            sigmaX: game.lost ? 4 : 0,
+                            sigmaY: game.lost ? 4 : 0,
+                          ),
+                          child: ColoredBox(
+                            color: const Color(0x99041729),
+                            child: Center(
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.all(26),
+                                child: buildOverlay(),
+                              ),
                             ),
                           ),
                         ),
@@ -913,40 +951,67 @@ class _GameScreenState extends State<GameScreen>
                       : '${game.puzzle.arrows.length} paths cleared · ${game.mistakes} mistakes\n'
                             '${firstCompletion ? '+40 coins  ·  +10 garden points' : 'A lovely replay. First-win rewards already earned.'}'
                 : lost
-                ? 'Try this puzzle again with 3 hearts.\nYour completed levels are safe.'
+                ? 'Watch a rewarded ad for 3 hearts and continue from here. Your cleared arrows stay cleared.'
                 : 'Take your time. Your puzzle will be here.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: muted, height: 1.7, fontSize: 13),
           ),
           const SizedBox(height: 25),
-          GoldButton(
-            label: tutorial
-                ? "Let's play"
-                : won
-                ? (learning
-                      ? (trainingRound == 1
-                            ? 'Practice round 2'
-                            : 'Start Level ${widget.level}')
-                      : game.puzzle.level < LevelCatalog.count
-                      ? 'Next level'
-                      : 'Journey complete')
-                : lost
-                ? 'Restart level'
-                : 'Resume',
-            onPressed: tutorial
-                ? () => setState(() => tutorial = false)
-                : won
-                ? (game.puzzle.level < LevelCatalog.count
-                      ? next
-                      : () => Navigator.pop(context))
-                : lost
-                ? restart
-                : () => setState(() => paused = false),
-          ),
+          if (lost && !learning) ...[
+            FilledButton.icon(
+              onPressed: reviving ? null : requestRevive,
+              icon: const Icon(Icons.ondemand_video),
+              label: Text(
+                reviving ? 'Ad in progress…' : 'Watch ad · +3 hearts',
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF167BB8),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 56),
+              ),
+            ),
+            if (reviveMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  reviveMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: ice),
+                ),
+              ),
+            TextButton(
+              onPressed: reviving ? null : restart,
+              child: const Text('No thanks, restart'),
+            ),
+          ] else
+            GoldButton(
+              label: tutorial
+                  ? "Let's play"
+                  : won
+                  ? (learning
+                        ? (trainingRound == 1
+                              ? 'Practice round 2'
+                              : 'Start Level ${widget.level}')
+                        : game.puzzle.level < LevelCatalog.count
+                        ? 'Next level'
+                        : 'Journey complete')
+                  : lost
+                  ? 'Restart level'
+                  : 'Resume',
+              onPressed: tutorial
+                  ? () => setState(() => tutorial = false)
+                  : won
+                  ? (game.puzzle.level < LevelCatalog.count
+                        ? next
+                        : () => Navigator.pop(context))
+                  : lost
+                  ? restart
+                  : () => setState(() => paused = false),
+            ),
           if (!tutorial) ...[
             const SizedBox(height: 10),
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: reviving ? null : () => Navigator.pop(context),
               child: const Text('Back to home', style: TextStyle(color: muted)),
             ),
           ],
