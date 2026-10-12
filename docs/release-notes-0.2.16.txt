@@ -1,0 +1,5 @@
+<en-GB>
+Daily Challenge now stays completed after your daily win. Come back tomorrow for the next puzzle.
+Your garden now shows the next decoration, unlock progress and garden points needed.
+Includes saved puzzles, daily streak bonuses, coin themes and optional rewarded ads to restore 3 hearts.
+</en-GB>
