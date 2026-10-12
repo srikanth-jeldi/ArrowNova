@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../game/puzzle.dart';
+import '../game/board_themes.dart';
 import '../garden/garden_catalog.dart';
 
 class PlayerProgress {
@@ -25,6 +26,10 @@ class PlayerProgress {
     this.levelsSinceAdBreak = 0,
     this.sound = true,
     this.haptics = true,
+    Map<String, Map<String, dynamic>>? runs,
+    Map<String, int>? streakRewards,
+    Set<String>? themes,
+    this.selectedTheme = 'crystal',
   }) : completed = completed ?? {},
        chapters = {
          1,
@@ -39,7 +44,32 @@ class PlayerProgress {
        dailyStars = dailyStars ?? {},
        owned = {...?owned, 'lantern'},
        placements = placements ?? {},
-       bestStars = bestStars ?? {};
+       bestStars = bestStars ?? {},
+       runs = runs ?? {},
+       streakRewards = streakRewards ?? {},
+       themes = {'crystal', ...?themes};
+  final Map<String, Map<String, dynamic>> runs;
+  final Map<String, int> streakRewards;
+  final Set<String> themes;
+  String selectedTheme;
+  bool buyTheme(String id) {
+    final matches = boardThemes.where((theme) => theme.id == id);
+    if (matches.isEmpty || themes.contains(id) || coins < matches.first.cost) {
+      return false;
+    }
+    themes.add(id);
+    selectedTheme = id;
+    return true;
+  }
+
+  int nextStreakBonus(DateTime date) {
+    final yesterday = DateTime(date.year, date.month, date.day - 1);
+    final previous = dailyStars.containsKey(dayKey(yesterday))
+        ? dailyStreak(yesterday)
+        : 0;
+    return const [20, 30, 40, 50, 60, 80, 100][previous % 7];
+  }
+
   final Set<int> completed;
   final Set<int> chapters;
   bool chapterOpen(int chapter) => chapters.contains(chapter);
@@ -105,6 +135,7 @@ class PlayerProgress {
   bool completeDaily(DateTime date, int stars) {
     final key = dayKey(date);
     final first = !dailyStars.containsKey(key);
+    if (first) streakRewards[key] = nextStreakBonus(date);
     if (stars > (dailyStars[key] ?? 0)) dailyStars[key] = stars;
     return first;
   }
@@ -139,7 +170,11 @@ class PlayerProgress {
   }
 
   int get coins =>
-      (completed.length + dailyStars.length + chestStars.length) * 40;
+      (completed.length + dailyStars.length + chestStars.length) * 40 +
+      streakRewards.values.fold<int>(0, (sum, value) => sum + value) -
+      boardThemes
+          .where((theme) => themes.contains(theme.id))
+          .fold<int>(0, (sum, theme) => sum + theme.cost);
   int get gardenPoints =>
       (completed.length + dailyStars.length + chestStars.length) * 10 -
       gardenItems
@@ -176,6 +211,10 @@ class PlayerProgress {
       completed.contains(level - 1) ||
       skipped.contains(level - 1);
   Map<String, Object> toJson() => {
+    'runs': runs,
+    'streakRewards': streakRewards,
+    'themes': themes.toList(),
+    'selectedTheme': selectedTheme,
     'completed': completed.toList(),
     'chapters': chapters.toList(),
     'skipped': skipped.toList(),
@@ -193,6 +232,33 @@ class PlayerProgress {
     'stars': bestStars.map((key, value) => MapEntry('$key', value)),
   };
   factory PlayerProgress.fromJson(Map<String, dynamic> data) => PlayerProgress(
+    runs: {
+      for (final entry
+          in (data['runs'] is Map ? data['runs'] as Map : {}).entries.take(20))
+        if (entry.key is String && entry.value is Map)
+          entry.key as String: Map<String, dynamic>.from(entry.value as Map),
+    },
+    streakRewards: {
+      for (final entry
+          in (data['streakRewards'] is Map ? data['streakRewards'] as Map : {})
+              .entries)
+        if (entry.key is String &&
+            DateTime.tryParse(entry.key) != null &&
+            entry.value is int &&
+            const [20, 30, 40, 50, 60, 80, 100].contains(entry.value))
+          entry.key as String: entry.value as int,
+    },
+    themes: (data['themes'] is List ? data['themes'] as List : [])
+        .whereType<String>()
+        .where((id) => boardThemes.any((theme) => theme.id == id))
+        .toSet(),
+    selectedTheme:
+        data['selectedTheme'] is String &&
+            (data['themes'] is List ? data['themes'] as List : []).contains(
+              data['selectedTheme'],
+            )
+        ? boardTheme(data['selectedTheme']).id
+        : 'crystal',
     chapters: _readChapters(data),
     skipped: (data['skipped'] as List? ?? [])
         .whereType<int>()

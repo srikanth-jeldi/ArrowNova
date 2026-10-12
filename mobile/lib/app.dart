@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'core/reminders.dart';
 import 'game/daily.dart';
+import 'theme_shop_screen.dart';
 import 'core/ads.dart';
 import 'core/music_service.dart';
 import 'daily_chest_screen.dart';
@@ -221,6 +222,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => GardenScreen(progress: progress, onChanged: save),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
+  Future<void> openThemes() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ThemeShopScreen(progress: progress, onChanged: save),
       ),
     );
     if (mounted) setState(() {});
@@ -479,27 +489,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               child: homeTile(
                                 Icons.auto_awesome,
                                 'Crystal rewards',
-                                '${progress.coins} coins earned',
-                                () {
-                                  showDialog<void>(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      backgroundColor: navy,
-                                      title: const Text('Your crystal rewards'),
-                                      content: Text(
-                                        '${progress.coins} coins\n${progress.gardenPoints} garden points\n\n'
-                                        'First-time level wins earn 40 coins and 10 garden points. Visit your garden to place decorations. New items unlock at journey milestones.',
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context),
-                                          child: const Text('Got it'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
+                                '${progress.coins} coins · Themes',
+                                openThemes,
                                 summary: true,
                               ),
                             ),
@@ -512,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         'Daily challenge',
                         progress.dailyStars.containsKey(dayKey(DateTime.now()))
                             ? 'Completed today · ${progress.dailyStreak(DateTime.now())} day streak'
-                            : 'One puzzle today · +40 coins',
+                            : 'Win +40 coins · +${progress.nextStreakBonus(DateTime.now())} streak bonus',
                         openDaily,
                       ),
                       const SizedBox(height: 14),

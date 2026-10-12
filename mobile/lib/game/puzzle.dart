@@ -325,6 +325,46 @@ class GameSession {
   int? hinted;
   bool get won => removed.length == puzzle.arrows.length;
   bool get lost => lives == 0;
+  String get layoutKey => puzzle.arrows
+      .map((a) => '${a.id}:${a.cells.map((c) => '${c.x},${c.y}').join(';')}')
+      .join('|');
+  Map<String, dynamic> snapshot(int elapsedMs) => {
+    'layout': layoutKey,
+    'removed': removed.toList(),
+    'lives': lives,
+    'mistakes': mistakes,
+    'hinted': hinted,
+    'elapsedMs': elapsedMs,
+  };
+  int restore(Map<String, dynamic>? data) {
+    if (data == null ||
+        data['layout'] != layoutKey ||
+        data['lives'] is! int ||
+        data['mistakes'] is! int ||
+        data['removed'] is! List) {
+      return 0;
+    }
+    final ids = (data['removed'] as List).whereType<int>().toSet();
+    if (ids.length >= puzzle.arrows.length ||
+        ids.any((id) => !puzzle.arrows.any((a) => a.id == id)) ||
+        data['lives'] < 0 ||
+        data['lives'] > 3 ||
+        data['mistakes'] < 0) {
+      return 0;
+    }
+    removed.addAll(ids);
+    lives = data['lives'];
+    mistakes = data['mistakes'];
+    final savedHint = data['hinted'];
+    if (savedHint is int &&
+        !removed.contains(savedHint) &&
+        puzzle.arrows.any((a) => a.id == savedHint)) {
+      hinted = savedHint;
+    }
+    return data['elapsedMs'] is int
+        ? (data['elapsedMs'] as int).clamp(0, 604800000)
+        : 0;
+  }
 
   TapResult tap(int? id) {
     if (id == null ||

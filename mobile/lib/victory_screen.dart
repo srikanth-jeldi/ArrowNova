@@ -15,11 +15,13 @@ class VictoryScreen extends StatelessWidget {
     required this.elapsed,
     required this.firstCompletion,
     required this.totalCoins,
+    this.streakBonus = 0,
     required this.onNext,
     required this.onReplay,
     required this.onHome,
   });
   final int level, stars, moves, totalCoins;
+  final int streakBonus;
   final String? dailyLabel;
   final Duration elapsed;
   final bool firstCompletion;
@@ -127,7 +129,9 @@ class VictoryScreen extends StatelessWidget {
                                   _stat(Icons.timer_outlined, time, 'Time'),
                                   _stat(
                                     Icons.toll,
-                                    firstCompletion ? '+40' : '+0',
+                                    firstCompletion
+                                        ? '+${40 + streakBonus}'
+                                        : '+0',
                                     'Earned',
                                   ),
                                 ],

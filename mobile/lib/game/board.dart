@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
 import 'puzzle.dart';
+import 'board_themes.dart';
 
 class ArrowBoard extends StatelessWidget {
   const ArrowBoard({
@@ -15,6 +16,15 @@ class ArrowBoard extends StatelessWidget {
     this.progress = 0,
     this.showGuide = false,
     this.celebration = 0,
+    this.theme = const BoardTheme(
+      'crystal',
+      'Crystal blue',
+      0,
+      Color(0xFF064681),
+      Color(0xFF76E7FF),
+      Color(0xFF098DEF),
+      Color(0xFFEAF7FF),
+    ),
   });
   final GameSession game;
   final ValueChanged<int?> onTap;
@@ -23,6 +33,7 @@ class ArrowBoard extends StatelessWidget {
   final double progress;
   final bool showGuide;
   final double celebration;
+  final BoardTheme theme;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -38,6 +49,7 @@ class ArrowBoard extends StatelessWidget {
             CustomPaint(
               size: size,
               painter: ArrowPainter(
+                theme: theme,
                 game: game,
                 geometry: geometry,
                 activeId: activeId,
@@ -145,6 +157,15 @@ class ArrowPainter extends CustomPainter {
     this.blocked = false,
     this.progress = 0,
     this.reducedMotion = false,
+    this.theme = const BoardTheme(
+      'crystal',
+      'Crystal blue',
+      0,
+      Color(0xFF064681),
+      Color(0xFF76E7FF),
+      Color(0xFF098DEF),
+      Color(0xFFEAF7FF),
+    ),
   });
   final GameSession game;
   final BoardGeometry geometry;
@@ -153,6 +174,7 @@ class ArrowPainter extends CustomPainter {
   final double progress;
   final ValueChanged<int?> onTap;
   final bool reducedMotion;
+  final BoardTheme theme;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -220,12 +242,12 @@ class ArrowPainter extends CustomPainter {
           ? const Color(0xFF972437)
           : hint
           ? const Color(0xFF916114)
-          : const Color(0xFF064681);
+          : theme.dark;
       final light = isError
           ? const Color(0xFFFF8588)
           : hint
           ? const Color(0xFFFFE3A0)
-          : const Color(0xFF76E7FF);
+          : theme.light;
       final stroke = Paint()
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
@@ -251,11 +273,7 @@ class ArrowPainter extends CustomPainter {
         visible,
         stroke
           ..shader = LinearGradient(
-            colors: [
-              light,
-              hint ? const Color(0xFFE0AE42) : const Color(0xFF098DEF),
-              dark,
-            ],
+            colors: [light, hint ? const Color(0xFFE0AE42) : theme.body, dark],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ).createShader(visible.getBounds().inflate(width))

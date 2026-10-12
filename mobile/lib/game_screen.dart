@@ -1,4 +1,5 @@
 import 'game/daily.dart';
+import 'game/board_themes.dart';
 import 'core/ads.dart';
 
 import 'dart:async';
@@ -56,6 +57,21 @@ class _GameScreenState extends State<GameScreen>
   bool reviving = false;
   String? reviveMessage;
   final playTime = Stopwatch();
+  int restoredMs = 0;
+  String get runKey => widget.dailyDate == null
+      ? 'classic/${game.puzzle.level}'
+      : 'daily/${dayKey(widget.dailyDate!)}${widget.chestIndex == null ? '' : '/${widget.chestIndex}'}';
+  void saveRun() {
+    if (learning || game.won) return;
+    widget.progress.runs[runKey] = game.snapshot(
+      restoredMs + playTime.elapsedMilliseconds,
+    );
+    while (widget.progress.runs.length > 20) {
+      widget.progress.runs.remove(widget.progress.runs.keys.first);
+    }
+    widget.onSettingsChanged();
+  }
+
   int lessonStep = 0;
   int practiceMistakes = 0;
   int trainingRound = 0;
@@ -108,6 +124,7 @@ class _GameScreenState extends State<GameScreen>
           : LevelCatalog.get(widget.level),
     );
     tutorial = learning;
+    if (!learning) restoredMs = game.restore(widget.progress.runs[runKey]);
     prepareLesson();
     animation =
         AnimationController(
@@ -120,6 +137,7 @@ class _GameScreenState extends State<GameScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) saveRun();
     if (state != AppLifecycleState.resumed) unawaited(feedback.stop());
     if (state != AppLifecycleState.resumed &&
         mounted &&
@@ -131,6 +149,7 @@ class _GameScreenState extends State<GameScreen>
 
   @override
   void dispose() {
+    saveRun();
     WidgetsBinding.instance.removeObserver(this);
     animation.dispose();
     playTime.stop();
@@ -166,6 +185,7 @@ class _GameScreenState extends State<GameScreen>
     if (learning && id != game.hinted) return;
     final result = game.tap(id);
     if (result == TapResult.ignored) return;
+    saveRun();
     if (learning &&
         game.puzzle.level == 2 &&
         lessonStep == 0 &&
@@ -228,6 +248,7 @@ class _GameScreenState extends State<GameScreen>
           : widget.dailyDate != null
           ? !widget.progress.dailyStars.containsKey(dayKey(widget.dailyDate!))
           : !widget.progress.completed.contains(game.puzzle.level);
+      widget.progress.runs.remove(runKey);
       widget.onComplete(
         game.puzzle.level,
         (3 - game.mistakes + practiceMistakes).clamp(1, 3),
@@ -259,6 +280,8 @@ class _GameScreenState extends State<GameScreen>
     paused = false;
     firstCompletion = false;
     playTime.reset();
+    restoredMs = 0;
+    saveRun();
     prepareLesson();
     transform.value = Matrix4.identity();
   });
@@ -305,6 +328,7 @@ class _GameScreenState extends State<GameScreen>
     paused = false;
     tutorial = learning;
     playTime.reset();
+    restoredMs = learning ? 0 : game.restore(widget.progress.runs[runKey]);
     prepareLesson();
     transform.value = Matrix4.identity();
   });
@@ -329,6 +353,7 @@ class _GameScreenState extends State<GameScreen>
         paused = false;
         blocked = false;
         queuedTap = null;
+        saveRun();
       } else {
         reviveMessage = result == HintAdResult.unavailable
             ? 'No ad available right now. Try again or restart for free.'
@@ -377,7 +402,10 @@ class _GameScreenState extends State<GameScreen>
     if (!mounted) return;
     setState(() {
       hintFlow = false;
-      if (result == HintAdResult.earned) game.hint();
+      if (result == HintAdResult.earned) {
+        game.hint();
+        saveRun();
+      }
     });
     if (accepted == true && result != HintAdResult.earned) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -434,6 +462,7 @@ class _GameScreenState extends State<GameScreen>
     if (!mounted) return;
     setState(() => hintFlow = false);
     if (result == HintAdResult.earned) {
+      widget.progress.runs.remove(runKey);
       widget.progress.skip(game.puzzle.level);
       if (game.puzzle.level % ChapterCatalog.size == 0) {
         widget.progress.unlockChapter(ChapterCatalog.of(game.puzzle.level + 1));
@@ -494,9 +523,15 @@ class _GameScreenState extends State<GameScreen>
         level: game.puzzle.level,
         stars: (3 - game.mistakes + practiceMistakes).clamp(1, 3),
         moves: game.removed.length + game.mistakes,
-        elapsed: playTime.elapsed,
+        elapsed: playTime.elapsed + Duration(milliseconds: restoredMs),
         firstCompletion: firstCompletion,
         totalCoins: widget.progress.coins,
+        streakBonus:
+            firstCompletion &&
+                widget.dailyDate != null &&
+                widget.chestIndex == null
+            ? widget.progress.streakRewards[dayKey(widget.dailyDate!)] ?? 0
+            : 0,
         dailyLabel: widget.dailyDate != null
             ? '${dayKey(widget.dailyDate!)}${widget.chestIndex != null ? ' · CHEST ${widget.chestIndex! + 1}' : ''}'
             : null,
@@ -509,7 +544,7 @@ class _GameScreenState extends State<GameScreen>
       );
     }
     return PopScope(
-      canPop: !busy,
+      canPop: !busy && !reviving,
       child: Scaffold(
         bottomNavigationBar: learning ? null : const GameBanner(),
         body: Atmosphere(
@@ -603,13 +638,14 @@ class _GameScreenState extends State<GameScreen>
                           child: Container(
                             margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  Color(0xFFF1FAFF),
+                                  const Color(0xFFF1FAFF),
                                   Colors.white,
-                                  Color(0xFFEAF7FF),
+                                  boardTheme(widget.progress.selectedTheme)
+                                      .background,
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(30),
@@ -765,6 +801,9 @@ class _GameScreenState extends State<GameScreen>
                                         panEnabled: !busy && !overlay,
                                         scaleEnabled: !busy && !overlay,
                                         child: ArrowBoard(
+                                          theme: boardTheme(
+                                            widget.progress.selectedTheme,
+                                          ),
                                           game: game,
                                           celebration: celebrating
                                               ? animation.value

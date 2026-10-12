@@ -4,17 +4,25 @@ import 'package:arrownova/core/reminders.dart';
 import 'package:arrownova/game/daily.dart';
 
 void main() {
-  test('daily boards are deterministic, in bounds and solvable through rotations', () {
-    for (var i = 0; i < 8; i++) {
-      final date = DateTime(2026, 10, 10 + i);
-      final puzzle = DailyCatalog.get(date);
-      final again = DailyCatalog.get(DateTime(2026, 10, 10 + i, 23));
-      expect(puzzle.arrows.map((a) => a.cells.toString()).toList(),
-          again.arrows.map((a) => a.cells.toString()).toList());
-      expect(puzzle.arrows.every((a) => a.cells.every(puzzle.contains)), isTrue);
-      expect(puzzle.solution().length, puzzle.arrows.length);
-    }
-  });
+  test(
+    'daily boards are deterministic, in bounds and solvable through rotations',
+    () {
+      for (var i = 0; i < 8; i++) {
+        final date = DateTime(2026, 10, 10 + i);
+        final puzzle = DailyCatalog.get(date);
+        final again = DailyCatalog.get(DateTime(2026, 10, 10 + i, 23));
+        expect(
+          puzzle.arrows.map((a) => a.cells.toString()).toList(),
+          again.arrows.map((a) => a.cells.toString()).toList(),
+        );
+        expect(
+          puzzle.arrows.every((a) => a.cells.every(puzzle.contains)),
+          isTrue,
+        );
+        expect(puzzle.solution().length, puzzle.arrows.length);
+      }
+    },
+  );
   test('daily rewards count once and do not unlock classic levels', () {
     final progress = PlayerProgress();
     final date = DateTime(2026, 10, 10);
@@ -22,7 +30,10 @@ void main() {
     expect(progress.completeDaily(date, 3), isFalse);
     expect(progress.completeDaily(date, 2), isFalse);
     expect(progress.dailyStars[dayKey(date)], 3);
-    expect(progress.coins, 40);
+    expect(
+      progress.coins,
+      60,
+    ); // First daily win plus the day-one streak bonus.
     expect(progress.gardenPoints, 10);
     expect(progress.completed, isEmpty);
     expect(progress.nextLevel, 1);

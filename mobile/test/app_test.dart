@@ -7,6 +7,29 @@ import 'package:arrownova/game/board.dart';
 import 'package:arrownova/victory_screen.dart';
 
 void main() {
+  testWidgets('coin shop fits a phone', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ArrowNovaApp(
+        initialProgress: PlayerProgress(
+          completed: {1, 2, 3, 4, 5, 6},
+          sound: false,
+          haptics: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Crystal rewards'));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(ArrowNovaApp),
+      matchesGoldenFile('goldens/theme-shop.png'),
+    );
+    expect(tester.takeException(), isNull);
+  });
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
     for (final font in {
@@ -63,7 +86,7 @@ void main() {
         await tester.pumpAndSettle();
       }
       expect(find.text('No hearts left'), findsOneWidget);
-      await tester.tap(find.text('Restart level'));
+      await tester.tap(find.text('No thanks, restart'));
       await tester.pumpAndSettle();
       expect(board().game.lives, 3);
       expect(board().game.removed, isEmpty);
