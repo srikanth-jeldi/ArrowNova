@@ -327,14 +327,35 @@ class PlayerProgress {
 /// Uses the same secure-storage approach as ChessVerse AuthSessionStore,
 /// with an ArrowNova-only namespace and no production account connections.
 class ProgressStore {
+  ProgressStore({Future<void> Function(String)? write})
+    : _write = write ?? ((value) => _storage.write(key: _key, value: value));
   static const _storage = FlutterSecureStorage();
   static const _key = 'arrownova.progress.v1';
+  final Future<void> Function(String) _write;
+  String? _pending;
+  Future<void>? _writing;
   Future<PlayerProgress> read() async {
     final value = await _storage.read(key: _key);
     if (value == null) return PlayerProgress();
     return PlayerProgress.fromJson(jsonDecode(value) as Map<String, dynamic>);
   }
 
-  Future<void> save(PlayerProgress progress) =>
-      _storage.write(key: _key, value: jsonEncode(progress.toJson()));
+  Future<void> save(PlayerProgress progress) {
+    // Capture immutable JSON now. While storage is busy, retain only the newest
+    // checkpoint so a win is not stuck behind hundreds of obsolete arrow saves.
+    _pending = jsonEncode(progress.toJson());
+    return _writing ??= _flush();
+  }
+
+  Future<void> _flush() async {
+    try {
+      while (_pending != null) {
+        final value = _pending!;
+        _pending = null;
+        await _write(value);
+      }
+    } finally {
+      _writing = null;
+    }
+  }
 }

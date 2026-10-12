@@ -74,7 +74,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool loading = true;
   bool openingLevel = false;
   String? storageWarning;
-  Future<void> _saveQueue = Future.value();
   @override
   void initState() {
     super.initState();
@@ -187,18 +186,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (widget.initialProgress != null) return;
     MusicService.instance.setEnabled(progress.music);
     final snapshot = PlayerProgress.fromJson(progress.toJson());
-    _saveQueue = _saveQueue.then((_) async {
-      try {
-        await store.save(snapshot);
-      } catch (_) {
+    unawaited(
+      store.save(snapshot).catchError((Object error) {
         if (mounted) {
           setState(
             () => storageWarning =
                 'Progress could not be saved. Keep the app open and try again.',
           );
         }
-      }
-    });
+      }),
+    );
   }
 
   Future<void> openLevel(int level, {bool training = false}) async {

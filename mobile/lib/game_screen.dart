@@ -51,6 +51,7 @@ class _GameScreenState extends State<GameScreen>
   int? queuedTap;
   bool blocked = false, paused = false, tutorial = false;
   bool firstCompletion = false;
+  bool completionCommitted = false;
   bool celebrating = false;
   bool changingLevel = false;
   bool hintFlow = false;
@@ -62,7 +63,11 @@ class _GameScreenState extends State<GameScreen>
       ? 'classic/${game.puzzle.level}'
       : 'daily/${dayKey(widget.dailyDate!)}${widget.chestIndex == null ? '' : '/${widget.chestIndex}'}';
   void saveRun() {
-    if (learning || game.won) return;
+    if (learning) return;
+    if (game.won) {
+      commitCompletion();
+      return;
+    }
     widget.progress.runs[runKey] = game.snapshot(
       restoredMs + playTime.elapsedMilliseconds,
     );
@@ -70,6 +75,25 @@ class _GameScreenState extends State<GameScreen>
       widget.progress.runs.remove(widget.progress.runs.keys.first);
     }
     widget.onSettingsChanged();
+  }
+
+  // Persist the result before animations, audio, or ads can delay navigation.
+  void commitCompletion() {
+    if (learning || !game.won || completionCommitted) return;
+    completionCommitted = true;
+    playTime.stop();
+    firstCompletion = widget.chestIndex != null
+        ? !widget.progress.chestStars.containsKey(
+            widget.progress.chestKey(widget.dailyDate!, widget.chestIndex!),
+          )
+        : widget.dailyDate != null
+        ? !widget.progress.dailyStars.containsKey(dayKey(widget.dailyDate!))
+        : !widget.progress.completed.contains(game.puzzle.level);
+    widget.progress.runs.remove(runKey);
+    widget.onComplete(
+      game.puzzle.level,
+      (3 - game.mistakes + practiceMistakes).clamp(1, 3),
+    );
   }
 
   int lessonStep = 0;
@@ -241,27 +265,25 @@ class _GameScreenState extends State<GameScreen>
         sound('win');
         return;
       }
-      firstCompletion = widget.chestIndex != null
-          ? !widget.progress.chestStars.containsKey(
-              widget.progress.chestKey(widget.dailyDate!, widget.chestIndex!),
-            )
-          : widget.dailyDate != null
-          ? !widget.progress.dailyStars.containsKey(dayKey(widget.dailyDate!))
-          : !widget.progress.completed.contains(game.puzzle.level);
-      widget.progress.runs.remove(runKey);
-      widget.onComplete(
-        game.puzzle.level,
-        (3 - game.mistakes + practiceMistakes).clamp(1, 3),
-      );
+      commitCompletion();
       // The puzzle is complete, but victory actions are not visible yet.
       // Never interrupt a new puzzle after the player has pressed Next/Play.
       if (widget.progress.consumeAdBreak()) {
         setState(() => celebrating = true);
         widget.onSettingsChanged();
-        await feedback.stop();
-        await GameAds.instance.showAtBreak();
+        try {
+          await feedback.stop().timeout(const Duration(seconds: 2));
+        } catch (_) {
+          // A stalled audio plugin must not trap a completed puzzle.
+        }
+        try {
+          await GameAds.instance.showAtBreak();
+        } catch (_) {
+          // Keep the victory actions available when an ad fails.
+        } finally {
+          if (mounted) setState(() => celebrating = false);
+        }
         if (!mounted) return;
-        setState(() => celebrating = false);
       }
       sound('win');
       setState(() {});
@@ -279,6 +301,7 @@ class _GameScreenState extends State<GameScreen>
     blocked = false;
     paused = false;
     firstCompletion = false;
+    completionCommitted = false;
     playTime.reset();
     restoredMs = 0;
     saveRun();
@@ -288,7 +311,7 @@ class _GameScreenState extends State<GameScreen>
   Future<void> next() async {
     if (changingLevel) return;
     changingLevel = true;
-    await feedback.stop();
+    unawaited(feedback.stop());
     if (!mounted) return;
     if (!learning &&
         !await ensureChapter(
@@ -325,6 +348,7 @@ class _GameScreenState extends State<GameScreen>
     active = null;
     blocked = false;
     firstCompletion = false;
+    completionCommitted = false;
     paused = false;
     tutorial = learning;
     playTime.reset();

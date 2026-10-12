@@ -1,0 +1,6 @@
+<en-GB>
+Improved level completion: wins are recorded as soon as the final arrow clears.
+Improved autosave so the latest puzzle progress takes priority on slower devices.
+Next Level no longer waits for audio to stop.
+Includes daily challenge completion locking and garden decoration progress.
+</en-GB>
