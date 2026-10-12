@@ -34,6 +34,10 @@ class _GardenScreenState extends State<GardenScreen> {
       LevelCatalog.count,
       ((p.completed.length ~/ 50) + 1) * 50,
     );
+    final remainingItems = gardenItems
+        .where((item) => !p.owned.contains(item.id))
+        .toList();
+    final nextItem = remainingItems.isEmpty ? null : remainingItems.first;
     return Scaffold(
       appBar: AppBar(title: const Text('Your garden')),
       body: Center(
@@ -109,6 +113,45 @@ class _GardenScreenState extends State<GardenScreen> {
                 ),
               ),
               const SizedBox(height: 14),
+              if (nextItem != null) ...[
+                Card(
+                  color: const Color(0xFF15364E),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Next decoration: ${nextItem.name}',
+                          style: const TextStyle(
+                            color: gold,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: nextItem.unlock == 0
+                              ? 1
+                              : (p.completed.length / nextItem.unlock).clamp(
+                                  0.0,
+                                  1.0,
+                                ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          p.completed.length < nextItem.unlock
+                              ? '${nextItem.unlock - p.completed.length} more Classic levels to unlock · ${nextItem.cost} garden points'
+                              : p.gardenPoints < nextItem.cost
+                              ? 'Unlocked · ${nextItem.cost - p.gardenPoints} more garden points needed'
+                              : 'Ready to add · ${nextItem.cost} garden points',
+                          style: const TextStyle(color: ice),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
               OutlinedButton.icon(
                 onPressed: () => setState(() => editing = !editing),
                 icon: Icon(editing ? Icons.check_rounded : Icons.edit_outlined),

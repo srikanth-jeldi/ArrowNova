@@ -16,12 +16,14 @@ class VictoryScreen extends StatelessWidget {
     required this.firstCompletion,
     required this.totalCoins,
     this.streakBonus = 0,
+    this.allowReplay = true,
     required this.onNext,
     required this.onReplay,
     required this.onHome,
   });
   final int level, stars, moves, totalCoins;
   final int streakBonus;
+  final bool allowReplay;
   final String? dailyLabel;
   final Duration elapsed;
   final bool firstCompletion;
@@ -182,14 +184,15 @@ class VictoryScreen extends StatelessWidget {
                             const SizedBox(height: 12),
                             Row(
                               children: [
-                                Expanded(
-                                  child: _action(
-                                    'Replay',
-                                    Icons.replay,
-                                    onReplay,
+                                if (allowReplay)
+                                  Expanded(
+                                    child: _action(
+                                      'Replay',
+                                      Icons.replay,
+                                      onReplay,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
+                                if (allowReplay) const SizedBox(width: 12),
                                 Expanded(
                                   child: _action(
                                     'Home',

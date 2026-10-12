@@ -520,6 +520,7 @@ class _GameScreenState extends State<GameScreen>
     }
     if (game.won && !busy && !learning) {
       return VictoryScreen(
+        allowReplay: widget.dailyDate == null || widget.chestIndex != null,
         level: game.puzzle.level,
         stars: (3 - game.mistakes + practiceMistakes).clamp(1, 3),
         moves: game.removed.length + game.mistakes,

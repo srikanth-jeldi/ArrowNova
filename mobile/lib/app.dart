@@ -125,6 +125,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (openingLevel) return;
     openingLevel = true;
     final today = DateTime.now();
+    if (progress.dailyStars.containsKey(dayKey(today))) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: const Text('Today’s puzzle is complete!'),
+          content: Text(
+            'You earned ${progress.dailyStars[dayKey(today)]} stars.\n\nOne daily puzzle each day. Come back tomorrow for the next one (phone local time).\n\nYou can keep playing Classic levels today.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog),
+              child: const Text('Got it'),
+            ),
+          ],
+        ),
+      );
+      openingLevel = false;
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => GameScreen(

@@ -82,6 +82,7 @@ void main() {
     await tester.tap(find.text('Decorate garden'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Place').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Place').first);
     await tester.pumpAndSettle();
     expect(p.placements, {0: 'lantern'});
