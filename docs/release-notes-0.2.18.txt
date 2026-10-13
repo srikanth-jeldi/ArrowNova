@@ -1,0 +1,6 @@
+<en-GB>
+Improved recovery when an ad fails to open or its close callback is delayed.
+Level results stay visible while an ad opens, instead of showing an empty board.
+Reduced automatic ad cooldown from 120 to 90 seconds.
+Improved completion-animation recovery and Next Level retry handling.
+</en-GB>

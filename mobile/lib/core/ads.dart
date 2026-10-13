@@ -6,6 +6,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'music_service.dart';
 import 'ad_pacing.dart';
+import 'ad_session.dart';
 
 enum HintAdResult { earned, dismissed, unavailable }
 
@@ -205,7 +206,8 @@ class GameAds {
     var earned = false;
     var shown = false;
     final done = Completer<HintAdResult>();
-    void finish({bool failed = false}) {
+    var failed = false;
+    void finish() {
       if (done.isCompleted) return;
       ad.dispose();
       _showing = false;
@@ -221,20 +223,35 @@ class GameAds {
       unawaited(preloadReward());
     }
 
+    final session = AdSession(() {
+      if (!shown && !earned) failed = true;
+      finish();
+    });
     ad.fullScreenContentCallback = FullScreenContentCallback(
-      onAdShowedFullScreenContent: (_) => shown = true,
-      onAdDismissedFullScreenContent: (_) => finish(),
-      onAdFailedToShowFullScreenContent: (_, _) => finish(failed: true),
+      onAdShowedFullScreenContent: (_) {
+        if (session.finished) return;
+        shown = true;
+        session.markShown();
+      },
+      onAdDismissedFullScreenContent: (_) => session.finish(),
+      onAdFailedToShowFullScreenContent: (_, _) {
+        failed = true;
+        session.finish();
+      },
     );
-    try {
-      await ad.show(
-        onUserEarnedReward: (_, _) {
-          earned = true;
-        },
-      );
-    } catch (_) {
-      finish(failed: true);
-    }
+    // A missing platform reply must not bypass session recovery.
+    unawaited(() async {
+      try {
+        await ad.show(
+          onUserEarnedReward: (_, _) {
+            if (!session.finished) earned = true;
+          },
+        );
+      } catch (_) {
+        failed = true;
+        session.finish();
+      }
+    }());
     return done.future;
   }
 
@@ -267,16 +284,23 @@ class GameAds {
       unawaited(preload());
     }
 
+    final session = AdSession(finish);
     ad.fullScreenContentCallback = FullScreenContentCallback(
-      onAdShowedFullScreenContent: (_) => shown = true,
-      onAdDismissedFullScreenContent: (_) => finish(),
-      onAdFailedToShowFullScreenContent: (_, _) => finish(),
+      onAdShowedFullScreenContent: (_) {
+        if (session.finished) return;
+        shown = true;
+        session.markShown();
+      },
+      onAdDismissedFullScreenContent: (_) => session.finish(),
+      onAdFailedToShowFullScreenContent: (_, _) => session.finish(),
     );
-    try {
-      await ad.show();
-    } catch (_) {
-      finish();
-    }
+    unawaited(() async {
+      try {
+        await ad.show();
+      } catch (_) {
+        session.finish();
+      }
+    }());
     await done.future;
   }
 }

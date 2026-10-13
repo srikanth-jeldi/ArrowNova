@@ -23,6 +23,7 @@ class GameScreen extends StatefulWidget {
     required this.level,
     this.startTraining = false,
     this.showHintAd,
+    this.showBreakAd,
     this.dailyDate,
     this.chestIndex,
     required this.progress,
@@ -34,6 +35,7 @@ class GameScreen extends StatefulWidget {
   final DateTime? dailyDate;
   final int? chestIndex;
   final Future<HintAdResult> Function()? showHintAd;
+  final Future<void> Function()? showBreakAd;
   final PlayerProgress progress;
   final void Function(int level, int stars) onComplete;
   final VoidCallback onSettingsChanged;
@@ -53,6 +55,7 @@ class _GameScreenState extends State<GameScreen>
   bool firstCompletion = false;
   bool completionCommitted = false;
   bool celebrating = false;
+  bool adBreakPending = false;
   bool changingLevel = false;
   bool hintFlow = false;
   bool reviving = false;
@@ -229,7 +232,12 @@ class _GameScreenState extends State<GameScreen>
           : 300,
     );
     try {
-      await animation.forward(from: 0).orCancel;
+      await animation
+          .forward(from: 0)
+          .orCancel
+          .timeout(const Duration(seconds: 2));
+    } on TimeoutException {
+      animation.stop();
     } on TickerCanceled {
       return;
     }
@@ -242,7 +250,12 @@ class _GameScreenState extends State<GameScreen>
       });
       animation.duration = const Duration(milliseconds: 650);
       try {
-        await animation.forward(from: 0).orCancel;
+        await animation
+            .forward(from: 0)
+            .orCancel
+            .timeout(const Duration(seconds: 2));
+      } on TimeoutException {
+        animation.stop();
       } on TickerCanceled {
         return;
       }
@@ -266,10 +279,10 @@ class _GameScreenState extends State<GameScreen>
         return;
       }
       commitCompletion();
-      // The puzzle is complete, but victory actions are not visible yet.
-      // Never interrupt a new puzzle after the player has pressed Next/Play.
+      // Keep the result visible while the native ad opens; never a blank board.
+      // Navigation stays disabled until the ad session finishes or recovers.
       if (widget.progress.consumeAdBreak()) {
-        setState(() => celebrating = true);
+        setState(() => adBreakPending = true);
         widget.onSettingsChanged();
         try {
           await feedback.stop().timeout(const Duration(seconds: 2));
@@ -277,11 +290,11 @@ class _GameScreenState extends State<GameScreen>
           // A stalled audio plugin must not trap a completed puzzle.
         }
         try {
-          await GameAds.instance.showAtBreak();
+          await (widget.showBreakAd ?? GameAds.instance.showAtBreak)();
         } catch (_) {
           // Keep the victory actions available when an ad fails.
         } finally {
-          if (mounted) setState(() => celebrating = false);
+          if (mounted) setState(() => adBreakPending = false);
         }
         if (!mounted) return;
       }
@@ -309,25 +322,33 @@ class _GameScreenState extends State<GameScreen>
     transform.value = Matrix4.identity();
   });
   Future<void> next() async {
-    if (changingLevel) return;
+    if (changingLevel || adBreakPending) return;
     changingLevel = true;
     unawaited(feedback.stop());
-    if (!mounted) return;
-    if (!learning &&
-        !await ensureChapter(
-          context,
-          widget.progress,
-          game.puzzle.level + 1,
-          widget.onSettingsChanged,
-          showAd: widget.showHintAd,
-        )) {
+    try {
+      if (!mounted) return;
+      if (!learning &&
+          !await ensureChapter(
+            context,
+            widget.progress,
+            game.puzzle.level + 1,
+            widget.onSettingsChanged,
+            showAd: widget.showHintAd,
+          )) {
+        return;
+      }
+      if (mounted) advanceLevel();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open the next level. Please try again.'),
+          ),
+        );
+      }
+    } finally {
       changingLevel = false;
-      return;
     }
-    if (!mounted) return;
-    if (!mounted) return;
-    changingLevel = false;
-    advanceLevel();
   }
 
   void advanceLevel() => setState(() {
@@ -364,7 +385,7 @@ class _GameScreenState extends State<GameScreen>
     });
     var result = HintAdResult.unavailable;
     try {
-      await feedback.stop();
+      unawaited(feedback.stop());
       result = await (widget.showHintAd ?? GameAds.instance.showHintAd)();
     } catch (_) {
       result = HintAdResult.unavailable;
@@ -544,6 +565,7 @@ class _GameScreenState extends State<GameScreen>
     }
     if (game.won && !busy && !learning) {
       return VictoryScreen(
+        waitingForAd: adBreakPending,
         allowReplay: widget.dailyDate == null || widget.chestIndex != null,
         level: game.puzzle.level,
         stars: (3 - game.mistakes + practiceMistakes).clamp(1, 3),

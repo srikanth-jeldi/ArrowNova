@@ -6,7 +6,7 @@ class AdPacing {
 
   final DateTime Function() _now;
   late DateTime _lastBreak;
-  static const cooldown = Duration(minutes: 2);
+  static const cooldown = Duration(seconds: 90);
 
   bool get canShowInterstitial => _now().difference(_lastBreak) >= cooldown;
 

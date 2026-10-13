@@ -17,6 +17,7 @@ class VictoryScreen extends StatelessWidget {
     required this.totalCoins,
     this.streakBonus = 0,
     this.allowReplay = true,
+    this.waitingForAd = false,
     required this.onNext,
     required this.onReplay,
     required this.onHome,
@@ -24,6 +25,7 @@ class VictoryScreen extends StatelessWidget {
   final int level, stars, moves, totalCoins;
   final int streakBonus;
   final bool allowReplay;
+  final bool waitingForAd;
   final String? dailyLabel;
   final Duration elapsed;
   final bool firstCompletion;
@@ -33,191 +35,196 @@ class VictoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final time =
         '${elapsed.inMinutes.toString().padLeft(2, '0')}:${(elapsed.inSeconds % 60).toString().padLeft(2, '0')}';
-    return Scaffold(
-      backgroundColor: navy,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 620),
-            child: LayoutBuilder(
-              builder: (context, box) => SingleChildScrollView(
-                child: SizedBox(
-                  height: max(730, box.maxHeight),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.asset(
-                        'assets/art/victory-garden.webp',
-                        fit: BoxFit.cover,
-                        cacheWidth: 1080,
-                      ),
-                      const DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Color(0x65051B3D),
-                              Color(0x00051B3D),
-                              Color(0x00051B3D),
-                              Color(0xCC062449),
-                            ],
-                            stops: [0, .29, .58, .85],
+    return PopScope(
+      canPop: !waitingForAd,
+      child: Scaffold(
+        backgroundColor: navy,
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 620),
+              child: LayoutBuilder(
+                builder: (context, box) => SingleChildScrollView(
+                  child: SizedBox(
+                    height: max(730, box.maxHeight),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.asset(
+                          'assets/art/victory-garden.webp',
+                          fit: BoxFit.cover,
+                          cacheWidth: 1080,
+                        ),
+                        const DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Color(0x65051B3D),
+                                Color(0x00051B3D),
+                                Color(0x00051B3D),
+                                Color(0xCC062449),
+                              ],
+                              stops: [0, .29, .58, .85],
+                            ),
                           ),
                         ),
-                      ),
-                      const Positioned.fill(
-                        child: IgnorePointer(child: VictoryFireworks()),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 22, 24, 18),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'ArrowNova',
-                              style: TextStyle(
-                                color: Color(0xFF9DEBFF),
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 2,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Beautifully solved!',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'ArrowNovaSans',
-                                color: Colors.white,
-                                fontSize: 29,
-                                fontWeight: FontWeight.w700,
-                                shadows: [
-                                  Shadow(
-                                    color: Color(0xFF063D72),
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            VictoryPraise(stars: stars),
-                            // Give the tree canopy breathing room without
-                            // moving the artwork or the bottom controls.
-                            StarCelebration(stars: stars),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 14,
-                                horizontal: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xF5FFFFFF),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: const Color(0xFFE2D6BB),
+                        const Positioned.fill(
+                          child: IgnorePointer(child: VictoryFireworks()),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 22, 24, 18),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'ArrowNova',
+                                style: TextStyle(
+                                  color: Color(0xFF9DEBFF),
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 2,
                                 ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x22071B33),
-                                    blurRadius: 12,
-                                    offset: Offset(0, 5),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Beautifully solved!',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'ArrowNovaSans',
+                                  color: Colors.white,
+                                  fontSize: 29,
+                                  fontWeight: FontWeight.w700,
+                                  shadows: [
+                                    Shadow(
+                                      color: Color(0xFF063D72),
+                                      blurRadius: 8,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              VictoryPraise(stars: stars),
+                              // Give the tree canopy breathing room without
+                              // moving the artwork or the bottom controls.
+                              StarCelebration(stars: stars),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                  horizontal: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xF5FFFFFF),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: const Color(0xFFE2D6BB),
                                   ),
-                                ],
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x22071B33),
+                                      blurRadius: 12,
+                                      offset: Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    _stat(Icons.alt_route, '$moves', 'Moves'),
+                                    _stat(Icons.timer_outlined, time, 'Time'),
+                                    _stat(
+                                      Icons.toll,
+                                      firstCompletion
+                                          ? '+${40 + streakBonus}'
+                                          : '+0',
+                                      'Earned',
+                                    ),
+                                  ],
+                                ),
                               ),
-                              child: Row(
-                                children: [
-                                  _stat(Icons.alt_route, '$moves', 'Moves'),
-                                  _stat(Icons.timer_outlined, time, 'Time'),
-                                  _stat(
-                                    Icons.toll,
-                                    firstCompletion
-                                        ? '+${40 + streakBonus}'
-                                        : '+0',
-                                    'Earned',
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Total coins: $totalCoins',
-                              style: const TextStyle(
-                                fontFamily: 'ArrowNovaSans',
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xE6E6EEF1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                firstCompletion
-                                    ? (level % 50 == 0
-                                          ? 'Garden milestone! +10 points saved'
-                                          : '+10 garden points saved')
-                                    : 'Rewards already collected',
+                              const SizedBox(height: 12),
+                              Text(
+                                'Total coins: $totalCoins',
                                 style: const TextStyle(
                                   fontFamily: 'ArrowNovaSans',
-                                  fontSize: 12,
-                                  color: navy,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 14),
-                            GoldButton(
-                              label: dailyLabel != null
-                                  ? 'Back to home'
-                                  : level < LevelCatalog.count
-                                  ? 'Next level'
-                                  : 'Journey complete',
-                              icon: Icons.chevron_right,
-                              onPressed: onNext,
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                if (allowReplay)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xE6E6EEF1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  firstCompletion
+                                      ? (level % 50 == 0
+                                            ? 'Garden milestone! +10 points saved'
+                                            : '+10 garden points saved')
+                                      : 'Rewards already collected',
+                                  style: const TextStyle(
+                                    fontFamily: 'ArrowNovaSans',
+                                    fontSize: 12,
+                                    color: navy,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              GoldButton(
+                                label: waitingForAd
+                                    ? 'Opening ad...'
+                                    : dailyLabel != null
+                                    ? 'Back to home'
+                                    : level < LevelCatalog.count
+                                    ? 'Next level'
+                                    : 'Journey complete',
+                                icon: Icons.chevron_right,
+                                onPressed: waitingForAd ? null : onNext,
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  if (allowReplay)
+                                    Expanded(
+                                      child: _action(
+                                        'Replay',
+                                        Icons.replay,
+                                        waitingForAd ? null : onReplay,
+                                      ),
+                                    ),
+                                  if (allowReplay) const SizedBox(width: 12),
                                   Expanded(
                                     child: _action(
-                                      'Replay',
-                                      Icons.replay,
-                                      onReplay,
+                                      'Home',
+                                      Icons.home_rounded,
+                                      waitingForAd ? null : onHome,
                                     ),
                                   ),
-                                if (allowReplay) const SizedBox(width: 12),
-                                Expanded(
-                                  child: _action(
-                                    'Home',
-                                    Icons.home_rounded,
-                                    onHome,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              dailyLabel != null
-                                  ? 'DAILY $dailyLabel COMPLETE'
-                                  : 'LEVEL ${level.toString().padLeft(2, '0')} COMPLETE',
-                              style: const TextStyle(
-                                fontFamily: 'ArrowNovaSans',
-                                color: Color(0xFFDBF6FF),
-                                fontSize: 12,
-                                letterSpacing: 2,
+                                ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 14),
+                              Text(
+                                dailyLabel != null
+                                    ? 'DAILY $dailyLabel COMPLETE'
+                                    : 'LEVEL ${level.toString().padLeft(2, '0')} COMPLETE',
+                                style: const TextStyle(
+                                  fontFamily: 'ArrowNovaSans',
+                                  color: Color(0xFFDBF6FF),
+                                  fontSize: 12,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -260,7 +267,7 @@ class VictoryScreen extends StatelessWidget {
       ],
     ),
   );
-  Widget _action(String text, IconData icon, VoidCallback action) =>
+  Widget _action(String text, IconData icon, VoidCallback? action) =>
       FilledButton.icon(
         onPressed: action,
         icon: Icon(icon, size: 18),
