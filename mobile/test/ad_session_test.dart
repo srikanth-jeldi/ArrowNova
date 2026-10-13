@@ -3,12 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:arrownova/core/ad_session.dart';
 
 void main() {
-  testWidgets('missing show reply recovers once in five seconds', (
+  testWidgets('missing show reply recovers once in two seconds', (
     tester,
   ) async {
     var finishes = 0;
     final session = AdSession(() => finishes++);
-    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(milliseconds: 1999));
+    expect(finishes, 0);
+    await tester.pump(const Duration(milliseconds: 1));
     expect(finishes, 1);
     session.markShown();
     session.finish();

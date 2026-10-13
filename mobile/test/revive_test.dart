@@ -13,12 +13,14 @@ void main() {
       'revive preserves puzzle and grants only earned hearts: $result',
       (tester) async {
         final reward = Completer<HintAdResult>();
+        final progress = PlayerProgress(sound: false, haptics: false);
+        progress.review.wins = 2;
         var calls = 0;
         await tester.pumpWidget(
           MaterialApp(
             home: GameScreen(
               level: 1,
-              progress: PlayerProgress(sound: false, haptics: false),
+              progress: progress,
               onComplete: (_, _) {},
               onSettingsChanged: () {},
               showHintAd: () {
@@ -47,6 +49,7 @@ void main() {
           await tester.pumpAndSettle();
         }
         expect(game.lost, isTrue);
+        expect(progress.review.wins, 0);
         await tester.tap(find.text('Watch ad · +3 hearts'));
         await tester.pumpAndSettle();
         expect(calls, 1);

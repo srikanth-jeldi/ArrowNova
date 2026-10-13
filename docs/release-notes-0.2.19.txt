@@ -1,0 +1,6 @@
+<en-GB>
+Faster ad recovery: unavailable ads never delay level results, and ads that fail to open recover within two seconds.
+Removed the audio-stop wait before ads.
+Added an optional store rating prompt after three consecutive first-time puzzle wins, with at least 30 days between requests.
+Rating requests never block Next Level or share a completion break with an automatic ad.
+</en-GB>

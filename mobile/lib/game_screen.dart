@@ -1,6 +1,7 @@
 import 'game/daily.dart';
 import 'game/board_themes.dart';
 import 'core/ads.dart';
+import 'core/review_service.dart';
 
 import 'dart:async';
 import 'dart:ui' show ImageFilter;
@@ -24,6 +25,7 @@ class GameScreen extends StatefulWidget {
     this.startTraining = false,
     this.showHintAd,
     this.showBreakAd,
+    this.reviewService,
     this.dailyDate,
     this.chestIndex,
     required this.progress,
@@ -36,6 +38,7 @@ class GameScreen extends StatefulWidget {
   final int? chestIndex;
   final Future<HintAdResult> Function()? showHintAd;
   final Future<void> Function()? showBreakAd;
+  final ReviewService? reviewService;
   final PlayerProgress progress;
   final void Function(int level, int stars) onComplete;
   final VoidCallback onSettingsChanged;
@@ -93,6 +96,7 @@ class _GameScreenState extends State<GameScreen>
         ? !widget.progress.dailyStars.containsKey(dayKey(widget.dailyDate!))
         : !widget.progress.completed.contains(game.puzzle.level);
     widget.progress.runs.remove(runKey);
+    if (firstCompletion) widget.progress.review.recordWin();
     widget.onComplete(
       game.puzzle.level,
       (3 - game.mistakes + practiceMistakes).clamp(1, 3),
@@ -212,6 +216,7 @@ class _GameScreenState extends State<GameScreen>
     if (learning && id != game.hinted) return;
     final result = game.tap(id);
     if (result == TapResult.ignored) return;
+    if (game.lost && !learning) widget.progress.review.resetStreak();
     saveRun();
     if (learning &&
         game.puzzle.level == 2 &&
@@ -281,14 +286,29 @@ class _GameScreenState extends State<GameScreen>
       commitCompletion();
       // Keep the result visible while the native ad opens; never a blank board.
       // Navigation stays disabled until the ad session finishes or recovers.
-      if (widget.progress.consumeAdBreak()) {
-        setState(() => adBreakPending = true);
+      if (firstCompletion && widget.progress.review.claim(DateTime.now())) {
+        widget.progress.levelsSinceAdBreak = 0;
+        GameAds.instance.deferAutomaticAds();
         widget.onSettingsChanged();
-        try {
-          await feedback.stop().timeout(const Duration(seconds: 2));
-        } catch (_) {
-          // A stalled audio plugin must not trap a completed puzzle.
-        }
+        final completedGame = game;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          unawaited(
+            (widget.reviewService ?? ReviewService.instance).requestIfCurrent(
+              () =>
+                  mounted &&
+                  identical(game, completedGame) &&
+                  game.won &&
+                  ModalRoute.of(context)?.isCurrent != false,
+            ),
+          );
+        });
+      } else if (widget.progress.consumeAdBreak()) {
+        setState(
+          () => adBreakPending =
+              widget.showBreakAd != null || GameAds.instance.canShowBreakNow,
+        );
+        widget.onSettingsChanged();
+        unawaited(feedback.stop());
         try {
           await (widget.showBreakAd ?? GameAds.instance.showAtBreak)();
         } catch (_) {
@@ -307,6 +327,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void restart() => setState(() {
+    if (!learning && !game.won) widget.progress.review.resetStreak();
     queuedTap = null;
     unawaited(feedback.stop());
     game.restart();
@@ -508,6 +529,7 @@ class _GameScreenState extends State<GameScreen>
     setState(() => hintFlow = false);
     if (result == HintAdResult.earned) {
       widget.progress.runs.remove(runKey);
+      widget.progress.review.resetStreak();
       widget.progress.skip(game.puzzle.level);
       if (game.puzzle.level % ChapterCatalog.size == 0) {
         widget.progress.unlockChapter(ChapterCatalog.of(game.puzzle.level + 1));

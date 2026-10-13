@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 class AdSession extends WidgetsBindingObserver {
   AdSession(this.onFinish) {
     WidgetsBinding.instance.addObserver(this);
-    _opening = Timer(const Duration(seconds: 5), finish);
+    _opening = Timer(const Duration(seconds: 2), finish);
   }
   final VoidCallback onFinish;
   Timer? _opening, _returning;

@@ -48,6 +48,16 @@ class GameAds {
   int _consentEpoch = 0;
   final _pacing = AdPacing();
 
+  bool get canShowBreakNow =>
+      ready.value &&
+      !_showing &&
+      _pacing.canShowInterstitial &&
+      _interstitial != null &&
+      _loadedAt != null &&
+      DateTime.now().difference(_loadedAt!) <= const Duration(minutes: 55);
+
+  void deferAutomaticAds() => _pacing.fullscreenClosed();
+
   Future<void> initialize() async {
     if (_started ||
         kIsWeb ||

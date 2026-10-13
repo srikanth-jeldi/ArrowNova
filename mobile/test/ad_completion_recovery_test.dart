@@ -50,11 +50,9 @@ void main() {
     expect(find.byType(VictoryScreen), findsOneWidget);
     expect(progress.completed, contains(5));
     expect(progress.runs.containsKey('classic/5'), isFalse);
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump();
     expect(adCalls, 1);
     expect(find.text('Opening ad...'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     expect(find.text('Next level'), findsOneWidget);
     await tester.ensureVisible(find.text('Next level'));

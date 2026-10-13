@@ -1,4 +1,5 @@
 import '../game/daily.dart';
+import 'review_progress.dart';
 import '../game/chapters.dart';
 
 import 'dart:convert';
@@ -30,6 +31,7 @@ class PlayerProgress {
     Map<String, int>? streakRewards,
     Set<String>? themes,
     this.selectedTheme = 'crystal',
+    ReviewProgress? review,
   }) : completed = completed ?? {},
        chapters = {
          1,
@@ -47,7 +49,9 @@ class PlayerProgress {
        bestStars = bestStars ?? {},
        runs = runs ?? {},
        streakRewards = streakRewards ?? {},
-       themes = {'crystal', ...?themes};
+       themes = {'crystal', ...?themes},
+       review = review ?? ReviewProgress();
+  final ReviewProgress review;
   final Map<String, Map<String, dynamic>> runs;
   final Map<String, int> streakRewards;
   final Set<String> themes;
@@ -215,6 +219,7 @@ class PlayerProgress {
     'streakRewards': streakRewards,
     'themes': themes.toList(),
     'selectedTheme': selectedTheme,
+    'review': review.toJson(),
     'completed': completed.toList(),
     'chapters': chapters.toList(),
     'skipped': skipped.toList(),
@@ -232,6 +237,7 @@ class PlayerProgress {
     'stars': bestStars.map((key, value) => MapEntry('$key', value)),
   };
   factory PlayerProgress.fromJson(Map<String, dynamic> data) => PlayerProgress(
+    review: ReviewProgress.fromJson(data['review']),
     runs: {
       for (final entry
           in (data['runs'] is Map ? data['runs'] as Map : {}).entries.take(20))
