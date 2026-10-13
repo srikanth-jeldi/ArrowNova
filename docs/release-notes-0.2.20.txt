@@ -1,0 +1,5 @@
+<en-GB>
+Improved progress saving with an automatic retry when a save fails.
+Completed puzzles are saved again when leaving the result screen or putting the app in the background.
+Includes faster ad recovery and the recent level completion improvements.
+</en-GB>
