@@ -355,10 +355,20 @@ class ProgressStore {
 
   Future<void> _flush() async {
     try {
+      var failures = 0;
       while (_pending != null) {
         final value = _pending!;
         _pending = null;
-        await _write(value);
+        try {
+          await _write(value);
+          failures = 0;
+        } catch (_) {
+          // Retry the newest checkpoint, never replace a pending win with the
+          // older arrow snapshot whose write failed. Keep it for the next save
+          // if storage remains unavailable after one immediate retry.
+          _pending ??= value;
+          if (++failures >= 2) rethrow;
+        }
       }
     } finally {
       _writing = null;

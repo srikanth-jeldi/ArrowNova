@@ -10,12 +10,13 @@ void main() {
   ) async {
     final progress = PlayerProgress(sound: false, haptics: false);
     var completions = 0;
+    var saves = 0;
     await tester.pumpWidget(
       MaterialApp(
         home: GameScreen(
           level: 4,
           progress: progress,
-          onSettingsChanged: () {},
+          onSettingsChanged: () => saves++,
           onComplete: (level, stars) {
             completions++;
             progress.completed.add(level);
@@ -34,6 +35,11 @@ void main() {
     tester.widget<ArrowBoard>(find.byType(ArrowBoard)).onTap(solution.last);
     expect(completions, 1);
     expect(progress.runs.containsKey('classic/4'), isFalse);
+    final savesBeforeExit = saves;
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    expect(saves, greaterThan(savesBeforeExit));
+    expect(completions, 1);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     // Dispose while the last-arrow animation is still in flight.
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();

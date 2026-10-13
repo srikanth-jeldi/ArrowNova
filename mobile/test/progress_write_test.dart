@@ -5,6 +5,55 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:arrownova/core/progress_store.dart';
 
 void main() {
+  test('failed older write retries the newest completed checkpoint', () async {
+    final firstWrite = Completer<void>();
+    final writes = <String>[];
+    final store = ProgressStore(
+      write: (value) async {
+        writes.add(value);
+        if (writes.length == 1) await firstWrite.future;
+      },
+    );
+    final progress = PlayerProgress();
+    progress.runs['classic/1'] = {
+      'removed': [1],
+    };
+    final saved = store.save(progress);
+    progress.runs.clear();
+    progress.completed.add(1);
+    final completionSaved = store.save(progress);
+    firstWrite.completeError(StateError('temporary storage failure'));
+    await saved;
+    await completionSaved;
+    final loaded = PlayerProgress.fromJson(jsonDecode(writes.last));
+    expect(writes.length, 2);
+    expect(loaded.completed, {1});
+    expect(loaded.runs, isEmpty);
+  });
+
+  test(
+    'persistent write errors surface and a later save can recover',
+    () async {
+      var unavailable = true;
+      var attempts = 0;
+      String? disk;
+      final store = ProgressStore(
+        write: (value) async {
+          attempts++;
+          if (unavailable) throw StateError('storage unavailable');
+          disk = value;
+        },
+      );
+      final progress = PlayerProgress(completed: {1});
+      await expectLater(store.save(progress), throwsStateError);
+      expect(attempts, 2);
+      unavailable = false;
+      progress.completed.add(2);
+      await store.save(progress);
+      expect(PlayerProgress.fromJson(jsonDecode(disk!)).completed, {1, 2});
+    },
+  );
+
   test(
     'slow storage skips old checkpoints and writes the completed puzzle next',
     () async {

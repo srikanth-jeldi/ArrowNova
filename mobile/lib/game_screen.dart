@@ -71,7 +71,13 @@ class _GameScreenState extends State<GameScreen>
   void saveRun() {
     if (learning) return;
     if (game.won) {
-      commitCompletion();
+      if (completionCommitted) {
+        // A lifecycle save must retry persistence even after the in-memory win
+        // was committed. Do not award the result a second time.
+        widget.onSettingsChanged();
+      } else {
+        commitCompletion();
+      }
       return;
     }
     widget.progress.runs[runKey] = game.snapshot(
