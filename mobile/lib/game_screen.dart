@@ -65,6 +65,9 @@ class _GameScreenState extends State<GameScreen>
   String? reviveMessage;
   final playTime = Stopwatch();
   int restoredMs = 0;
+  BoardTheme get activeTheme => learning
+      ? boardThemes.first
+      : levelBoardTheme(widget.progress.selectedTheme, game.puzzle.level);
   String get runKey => widget.dailyDate == null
       ? 'classic/${game.puzzle.level}'
       : 'daily/${dayKey(widget.dailyDate!)}${widget.chestIndex == null ? '' : '/${widget.chestIndex}'}';
@@ -719,8 +722,7 @@ class _GameScreenState extends State<GameScreen>
                                 colors: [
                                   const Color(0xFFF1FAFF),
                                   Colors.white,
-                                  boardTheme(widget.progress.selectedTheme)
-                                      .background,
+                                  activeTheme.background,
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(30),
@@ -876,9 +878,7 @@ class _GameScreenState extends State<GameScreen>
                                         panEnabled: !busy && !overlay,
                                         scaleEnabled: !busy && !overlay,
                                         child: ArrowBoard(
-                                          theme: boardTheme(
-                                            widget.progress.selectedTheme,
-                                          ),
+                                          theme: activeTheme,
                                           game: game,
                                           celebration: celebrating
                                               ? animation.value

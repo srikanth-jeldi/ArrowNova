@@ -310,12 +310,12 @@ class ArrowPainter extends CustomPainter {
           ? const Color(0xFFE63950)
           : hint
           ? const Color(0xFFFFC84A)
-          : const Color(0xFF10B76A);
+          : theme.body;
       final headOutline = isError
           ? const Color(0xFF78172A)
           : hint
           ? const Color(0xFF76520A)
-          : const Color(0xFF064D36);
+          : theme.dark;
       canvas.drawShadow(triangle, const Color(0x50062C51), depth, false);
       canvas.drawPath(
         triangle,

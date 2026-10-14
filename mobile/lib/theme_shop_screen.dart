@@ -65,7 +65,7 @@ class _ThemeShopScreenState extends State<ThemeShopScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Earn coins from puzzle wins and daily streaks. Choose a matching arrow colour and board theme. No cash purchase required.',
+          'Level colours changes between blue, green and graphite black as you progress. Or use coins from wins and daily streaks to choose a fixed theme. No cash purchase required.',
           style: TextStyle(color: muted),
         ),
         const SizedBox(height: 12),
