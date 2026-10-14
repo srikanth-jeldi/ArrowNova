@@ -23,6 +23,7 @@ class GameScreen extends StatefulWidget {
     super.key,
     required this.level,
     this.startTraining = false,
+    this.endless = false,
     this.showHintAd,
     this.showBreakAd,
     this.reviewService,
@@ -34,6 +35,7 @@ class GameScreen extends StatefulWidget {
   });
   final int level;
   final bool startTraining;
+  final bool endless;
   final DateTime? dailyDate;
   final int? chestIndex;
   final Future<HintAdResult> Function()? showHintAd;
@@ -68,7 +70,9 @@ class _GameScreenState extends State<GameScreen>
   BoardTheme get activeTheme => learning
       ? boardThemes.first
       : levelBoardTheme(widget.progress.selectedTheme, game.puzzle.level);
-  String get runKey => widget.dailyDate == null
+  String get runKey => widget.endless
+      ? 'endless/${game.puzzle.level}'
+      : widget.dailyDate == null
       ? 'classic/${game.puzzle.level}'
       : 'daily/${dayKey(widget.dailyDate!)}${widget.chestIndex == null ? '' : '/${widget.chestIndex}'}';
   void saveRun() {
@@ -97,7 +101,9 @@ class _GameScreenState extends State<GameScreen>
     if (learning || !game.won || completionCommitted) return;
     completionCommitted = true;
     playTime.stop();
-    firstCompletion = widget.chestIndex != null
+    firstCompletion = widget.endless
+        ? game.puzzle.level == widget.progress.nextEndlessRound
+        : widget.chestIndex != null
         ? !widget.progress.chestStars.containsKey(
             widget.progress.chestKey(widget.dailyDate!, widget.chestIndex!),
           )
@@ -157,11 +163,16 @@ class _GameScreenState extends State<GameScreen>
     game = GameSession(
       learning
           ? TrainingCatalog.get(1)
+          : widget.endless
+          ? EndlessCatalog.get(widget.level)
           : widget.dailyDate != null
           ? widget.chestIndex != null
                 ? DailyChestCatalog.get(widget.dailyDate!, widget.chestIndex!)
                 : DailyCatalog.get(widget.dailyDate!)
-          : LevelCatalog.get(widget.level),
+          : LevelCatalog.resume(
+              widget.level,
+              widget.progress.runs['classic/${widget.level}'],
+            ),
     );
     tutorial = learning;
     if (!learning) restoredMs = game.restore(widget.progress.runs[runKey]);
@@ -358,6 +369,7 @@ class _GameScreenState extends State<GameScreen>
     try {
       if (!mounted) return;
       if (!learning &&
+          !widget.endless &&
           !await ensureChapter(
             context,
             widget.progress,
@@ -391,10 +403,23 @@ class _GameScreenState extends State<GameScreen>
         trainingRound = 0;
         widget.progress.trainingCompleted = true;
         widget.onSettingsChanged();
-        game = GameSession(LevelCatalog.get(widget.level));
+        game = GameSession(
+          LevelCatalog.resume(
+            widget.level,
+            widget.progress.runs['classic/${widget.level}'],
+          ),
+        );
       }
+    } else if (widget.endless) {
+      game = GameSession(EndlessCatalog.get(game.puzzle.level + 1));
     } else {
-      game = GameSession(LevelCatalog.get(game.puzzle.level + 1));
+      final nextLevel = game.puzzle.level + 1;
+      game = GameSession(
+        LevelCatalog.resume(
+          nextLevel,
+          widget.progress.runs['classic/$nextLevel'],
+        ),
+      );
     }
     active = null;
     blocked = false;
@@ -501,6 +526,7 @@ class _GameScreenState extends State<GameScreen>
         learning ||
         tutorial ||
         game.won ||
+        widget.endless ||
         widget.dailyDate != null ||
         game.puzzle.level >= LevelCatalog.count) {
       return;
@@ -596,8 +622,11 @@ class _GameScreenState extends State<GameScreen>
     }
     if (game.won && !busy && !learning) {
       return VictoryScreen(
+        endless: widget.endless,
         waitingForAd: adBreakPending,
-        allowReplay: widget.dailyDate == null || widget.chestIndex != null,
+        allowReplay:
+            !widget.endless &&
+            (widget.dailyDate == null || widget.chestIndex != null),
         level: game.puzzle.level,
         stars: (3 - game.mistakes + practiceMistakes).clamp(1, 3),
         moves: game.removed.length + game.mistakes,
@@ -614,7 +643,9 @@ class _GameScreenState extends State<GameScreen>
             ? '${dayKey(widget.dailyDate!)}${widget.chestIndex != null ? ' · CHEST ${widget.chestIndex! + 1}' : ''}'
             : null,
         onNext:
-            widget.dailyDate == null && game.puzzle.level < LevelCatalog.count
+            widget.endless ||
+                widget.dailyDate == null &&
+                    game.puzzle.level < LevelCatalog.count
             ? next
             : () => Navigator.pop(context),
         onReplay: restart,
@@ -680,6 +711,8 @@ class _GameScreenState extends State<GameScreen>
                                     Text(
                                       learning
                                           ? 'PRACTICE $trainingRound / 2'
+                                          : widget.endless
+                                          ? 'ROUND ${game.puzzle.level} · ENDLESS'
                                           : widget.dailyDate != null
                                           ? '${widget.chestIndex != null ? 'CHEST ${widget.chestIndex! + 1}/5' : 'DAILY'} · ${dayKey(widget.dailyDate!)}'
                                           : 'LEVEL ${game.puzzle.level.toString().padLeft(2, '0')}  ·  ${LevelCatalog.isHard(game.puzzle.level) ? 'HARD' : 'CLASSIC'}',
@@ -959,6 +992,7 @@ class _GameScreenState extends State<GameScreen>
                                           },
                                         ),
                                         if (!learning &&
+                                            !widget.endless &&
                                             widget.dailyDate == null &&
                                             game.puzzle.level <
                                                 LevelCatalog.count)
@@ -1106,6 +1140,8 @@ class _GameScreenState extends State<GameScreen>
                         ? (trainingRound == 1
                               ? 'Practice round 2'
                               : 'Start Level ${widget.level}')
+                        : widget.endless
+                        ? 'Next round'
                         : game.puzzle.level < LevelCatalog.count
                         ? 'Next level'
                         : 'Journey complete')
@@ -1115,7 +1151,7 @@ class _GameScreenState extends State<GameScreen>
               onPressed: tutorial
                   ? () => setState(() => tutorial = false)
                   : won
-                  ? (game.puzzle.level < LevelCatalog.count
+                  ? (widget.endless || game.puzzle.level < LevelCatalog.count
                         ? next
                         : () => Navigator.pop(context))
                   : lost

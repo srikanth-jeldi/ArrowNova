@@ -89,16 +89,30 @@ class Puzzle {
 class LevelCatalog {
   static const count = 6000;
   static final Map<int, Puzzle> _cache = {};
-  static bool isHard(int level) => level % 10 == 0;
-  // Preserve released boards and saved stars for levels 1–800. Later boards
+  static bool isHard(int level) => level > 30 && level % 10 == 0;
+  // Introduce short, smaller puzzles first. Levels 31–800 keep released boards.
+  // Later boards
   // stay at 200 arrows, with fresh seeds and a hard puzzle every tenth level.
-  static int arrowCount(int level) =>
-      30 + (level.clamp(1, 800) - 1) * 170 ~/ 799;
-  static Puzzle get(int level) {
+  static int arrowCount(int level) => level <= 30
+      ? 5 + (level.clamp(1, 30) - 1) * 25 ~/ 29
+      : 30 + (level.clamp(1, 800) - 1) * 170 ~/ 799;
+  static Puzzle get(int level, {bool legacy = false}) {
     if (level < 1 || level > count) throw RangeError.range(level, 1, count);
-    if (_cache.containsKey(level)) return _cache[level]!;
+    final key = legacy && level <= 30 ? -level : level;
+    if (_cache.containsKey(key)) return _cache[key]!;
     if (_cache.length >= 24) _cache.remove(_cache.keys.first);
-    return _cache[level] = _generate(level);
+    return _cache[key] = _generate(level, legacy: legacy);
+  }
+
+  static Puzzle resume(int level, Map<String, dynamic>? run) {
+    final current = get(level);
+    if (level <= 30 &&
+        run != null &&
+        run['layout'] != GameSession(current).layoutKey) {
+      final previous = get(level, legacy: true);
+      if (run['layout'] == GameSession(previous).layoutKey) return previous;
+    }
+    return current;
   }
 
   static const _directions = [Cell(1, 0), Cell(-1, 0), Cell(0, 1), Cell(0, -1)];
@@ -124,9 +138,67 @@ class LevelCatalog {
     return cells;
   }
 
-  static Puzzle _generate(int level) {
+  // Independent lanes create short, visible removal chains without cycles.
+  // The seed is tied to the round, so retry and resume always use the same board.
+  static Puzzle _gentle(int level, {required bool endless}) {
+    final random = Random(7429 + level * 101 + (endless ? 918273 : 0));
+    final count = endless
+        ? EndlessCatalog.arrowCount(level)
+        : arrowCount(level);
+    final chain = level <= 5
+        ? 2
+        : level <= 10
+        ? 3
+        : level <= 20
+        ? 4
+        : 5;
+    final rows = (count / chain).ceil();
+    final width = chain * 8 + 2;
+    final height = rows * 4 + 2;
+    final paths = <ArrowPath>[];
+    for (var row = 0; row < rows; row++) {
+      final left = random.nextBool();
+      final inRow = min(chain, count - paths.length);
+      final y = 1 + row * 4;
+      for (var col = 0; col < inRow; col++) {
+        final x = 1 + col * 8 + random.nextInt(2);
+        final length = 3 + random.nextInt(level <= 10 ? 2 : 3);
+        final cells = <Cell>[
+          if (random.nextBool()) Cell(x, y + 1),
+          for (var dx = 0; dx < length; dx++) Cell(x + dx, y),
+        ];
+        paths.add(
+          ArrowPath(
+            paths.length,
+            cells.map((c) => left ? Cell(width - 1 - c.x, c.y) : c).toList(),
+          ),
+        );
+      }
+    }
+    // Use portrait geometry so the paths remain readable on a phone.
+    if (width > height) {
+      return Puzzle(level, height, width, [
+        for (final path in paths)
+          ArrowPath(
+            path.id,
+            path.cells.map((c) => Cell(c.y, width - 1 - c.x)).toList(),
+          ),
+      ]);
+    }
+    return Puzzle(level, width, height, paths);
+  }
+
+  static Puzzle _generate(
+    int level, {
+    bool legacy = false,
+    bool endless = false,
+  }) {
+    if (endless || (level <= 30 && !legacy)) {
+      return _gentle(level, endless: endless);
+    }
+    final hard = level % 10 == 0;
     final random = Random(7429 + level * 101);
-    final target = arrowCount(level);
+    final target = 30 + (level.clamp(1, 800) - 1) * 170 ~/ 799;
     final fill = (level - 1) % 4 == 1 ? .52 : .78;
     final width = sqrt(target * 10 / (fill * 1.2)).ceil();
     final height = (width * 1.2).round();
@@ -177,7 +249,7 @@ class LevelCatalog {
         }
         if (heads.isEmpty) break;
         heads.shuffle(random);
-        if (isHard(level)) {
+        if (hard) {
           heads.sort(
             (a, b) => (mask.contains(b.$1 + b.$2) ? 1 : 0).compareTo(
               mask.contains(a.$1 + a.$2) ? 1 : 0,
@@ -236,9 +308,7 @@ class LevelCatalog {
             used.add(path.last);
           }
           final score =
-              (mask.contains(head + direction)
-                  ? (isHard(level) ? 2.0 : .5)
-                  : 0) -
+              (mask.contains(head + direction) ? (hard ? 2.0 : .5) : 0) -
               (path.length - wanted).abs().toDouble() -
               turns * .12 +
               random.nextDouble() * .2;
@@ -264,16 +334,16 @@ class LevelCatalog {
           short < (target * .12).floor() ||
           long < 2 ||
           !arrows.any((a) => a.cells.length >= 24) ||
-          blocked < (isHard(level) ? .7 : .4) ||
-          (isHard(level) && depth < 8)) {
+          blocked < (hard ? .7 : .4) ||
+          (hard && depth < 8)) {
         continue;
       }
       final score =
-          (isHard(level) ? depth * 1.5 : 0) +
+          (hard ? depth * 1.5 : 0) +
           coverage * 100 +
           min(short, target * .2) +
           min(long, target * .12) * 2 +
-          blocked * (isHard(level) ? 20 : 4);
+          blocked * (hard ? 20 : 4);
       if (score > bestScore) {
         best = candidate;
         bestScore = score;
@@ -281,12 +351,23 @@ class LevelCatalog {
       if (coverage >= .87 &&
           short >= target * .15 &&
           long >= max(2, target * .08) &&
-          blocked >= (isHard(level) ? .75 : .4)) {
+          blocked >= (hard ? .75 : .4)) {
         break;
       }
     }
     if (best == null) throw StateError('Could not build level $level');
     return best;
+  }
+}
+
+class EndlessCatalog {
+  static final Map<int, Puzzle> _cache = {};
+  static int arrowCount(int round) => (10 + (round - 1) ~/ 2).clamp(10, 80);
+  static Puzzle get(int round) {
+    if (round < 1) throw RangeError.value(round, 'round');
+    if (_cache.containsKey(round)) return _cache[round]!;
+    if (_cache.length >= 24) _cache.remove(_cache.keys.first);
+    return _cache[round] = LevelCatalog._generate(round, endless: true);
   }
 }
 

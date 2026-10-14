@@ -21,29 +21,36 @@ Future<void> worker((SendPort, int, int) args) async {
         check(a.cells.length >= 2, n, 'short path');
         for (var i = 0; i < a.cells.length; i++) {
           final c = a.cells[i];
-          check(mask.contains(c) && cells.add(c), n, 'overlap / silhouette');
+          check(
+            (n <= 30 ? p.contains(c) : mask.contains(c)) && cells.add(c),
+            n,
+            'overlap / bounds',
+          );
           if (i > 0) {
             final d = c - a.cells[i - 1];
             check(d.x.abs() + d.y.abs() == 1, n, 'disconnected path');
           }
         }
       }
-      check(cells.length / mask.length >= .8, n, 'coverage');
-      check(
-        p.arrows.where((a) => a.cells.length <= 4).length >=
-            (p.arrows.length * .12).floor(),
-        n,
-        'short path variety',
-      );
-      check(
-        p.arrows.where((a) => a.cells.length >= 18).length >= 2 &&
-            p.arrows.any((a) => a.cells.length >= 24),
-        n,
-        'long path variety',
-      );
-      final blocked =
-          p.arrows.where((a) => !p.canExit(a.id, {})).length / p.arrows.length;
-      check(blocked >= (LevelCatalog.isHard(n) ? .7 : .4), n, 'dependencies');
+      if (n > 30) {
+        check(cells.length / mask.length >= .8, n, 'coverage');
+        check(
+          p.arrows.where((a) => a.cells.length <= 4).length >=
+              (p.arrows.length * .12).floor(),
+          n,
+          'short path variety',
+        );
+        check(
+          p.arrows.where((a) => a.cells.length >= 18).length >= 2 &&
+              p.arrows.any((a) => a.cells.length >= 24),
+          n,
+          'long path variety',
+        );
+        final blocked =
+            p.arrows.where((a) => !p.canExit(a.id, {})).length /
+            p.arrows.length;
+        check(blocked >= (LevelCatalog.isHard(n) ? .7 : .4), n, 'dependencies');
+      }
       final solution = p.solution();
       check(solution.length == p.arrows.length, n, 'unsolvable');
       if (LevelCatalog.isHard(n)) {

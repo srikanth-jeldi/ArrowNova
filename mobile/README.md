@@ -163,8 +163,8 @@ solvable rotated board, independently of Classic progression. The first completi
 per date earns 40 coins / 10 garden points; replays can improve stars without farming
 rewards. Local history and streaks persist in PlayerProgress.
 
-Android reminders are opt-in in Settings and use local notifications around 09:00,
-13:00 and 19:00 in the phone timezone. Scheduling uses inexact alarms (no exact-alarm
+Android reminders are opt-in in Settings and use local notifications around 09:00
+in the phone timezone, plus a one-shot reminder after 24 hours away. Scheduling uses inexact alarms (no exact-alarm
 permission); Android battery restrictions can delay them. Completing a daily board
 reschedules remaining reminders from the next day. No push server or VPS is needed.
 Notifications currently open the app, where Daily challenge is on Home. Native
@@ -200,5 +200,17 @@ reminder to tomorrow. One additional, non-repeating reminder is scheduled for
 refreshes it. Turning the switch off cancels both, including retired reminder
 slots from older builds. Android uses inexact alarms; device power restrictions
 or force-stop can delay/prevent delivery. Real-device delivery remains to be
-verified. This fix is newer than the released 0.2.20 artifacts and needs a new
-build before phone testing.
+verified. These changes are included in version 0.2.21+23.
+
+## Beginner and Endless puzzles (0.2.21)
+
+Classic levels 1–30 increase from 5 to 30 arrows using short, solvable removal
+chains. Existing unfinished early levels retain their original layout until
+completed. Levels 31–6000 retain their released geometry.
+
+Home now has a separate Endless puzzles entry. Round seeds generate repeatable
+offline boards, growing from 10 to a maximum of 80 arrows, with no 6000-round
+limit. Each completed round earns 40 coins and 10 garden points once; the next
+round and unfinished board persist independently of Classic and Daily progress.
+The result screen offers Next round. Default Level colours rotate blue, green
+and graphite; purchased themes still override the default palette.

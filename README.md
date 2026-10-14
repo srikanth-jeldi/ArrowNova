@@ -15,7 +15,10 @@ pending. See `mobile/ios/RELEASE.md` for the native release requirements.
 - Raised glass-style arrow paths, three hearts, hints and retry.
 - Crystal-garden victory screen, performance stars and local progress storage.
 - Garden decorations, milestone unlocks and earned-point purchases.
-- 30–200 arrows per level, with mixed short/long paths in four silhouette shapes.
+- A gentle first 30 levels (5–30 arrows), followed by denser silhouette puzzles up to 200 arrows.
+- Endless puzzles with generated rounds, independent saved progress and earned rewards.
+- Default blue, green and graphite level colours, plus optional coin-unlocked themes.
+- Opt-in daily and 24-hour return reminders.
 - Experimental duel source retained separately for future development.
 - Rewarded hints and Classic skips (skips grant no stars or currency).
 - Daily Chest: one rewarded ad unlocks five hard puzzles until local midnight.

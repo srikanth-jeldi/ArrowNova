@@ -246,6 +246,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted) setState(() {});
   }
 
+  Future<void> openEndless() async {
+    if (openingLevel) return;
+    openingLevel = true;
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => GameScreen(
+            level: progress.nextEndlessRound,
+            endless: true,
+            progress: progress,
+            onComplete: (round, stars) {
+              progress.completeEndless(round);
+              save();
+            },
+            onSettingsChanged: save,
+          ),
+        ),
+      );
+    } finally {
+      openingLevel = false;
+      if (mounted) setState(() {});
+    }
+  }
+
   Future<void> openThemes() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -561,6 +585,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             ? 'Completed today · ${progress.dailyStreak(DateTime.now())} day streak'
                             : 'Win +40 coins · +${progress.nextStreakBonus(DateTime.now())} streak bonus',
                         openDaily,
+                      ),
+                      const SizedBox(height: 14),
+                      homeTile(
+                        Icons.all_inclusive,
+                        'Endless puzzles',
+                        'Round ${progress.nextEndlessRound} · A fresh puzzle every round',
+                        openEndless,
                       ),
                       const SizedBox(height: 14),
                       homeTile(

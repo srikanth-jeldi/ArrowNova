@@ -220,7 +220,7 @@ void main() {
       isTrue,
     );
     expect(board().game.puzzle.level, 1);
-    expect(board().game.puzzle.arrows.length, greaterThanOrEqualTo(20));
+    expect(board().game.puzzle.arrows.length, 5);
     expect(board().game.lives, 3);
     expect(find.text("Let's play"), findsNothing);
     for (final id in board().game.puzzle.solution()) {
@@ -264,7 +264,7 @@ void main() {
     );
   });
   testWidgets(
-    'dense expert board fits phone and supports precise zoomed taps',
+    'beginner and dense boards fit phone and support precise zoomed taps',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;

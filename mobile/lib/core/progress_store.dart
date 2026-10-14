@@ -31,6 +31,7 @@ class PlayerProgress {
     Map<String, int>? streakRewards,
     Set<String>? themes,
     this.selectedTheme = 'crystal',
+    this.endlessCompleted = 0,
     ReviewProgress? review,
   }) : completed = completed ?? {},
        chapters = {
@@ -56,6 +57,15 @@ class PlayerProgress {
   final Map<String, int> streakRewards;
   final Set<String> themes;
   String selectedTheme;
+  int endlessCompleted;
+  int get nextEndlessRound => endlessCompleted + 1;
+  bool completeEndless(int round) {
+    if (round != nextEndlessRound) return false;
+    endlessCompleted = round;
+    recordAdCompletion();
+    return true;
+  }
+
   bool buyTheme(String id) {
     final matches = boardThemes.where((theme) => theme.id == id);
     if (matches.isEmpty || themes.contains(id) || coins < matches.first.cost) {
@@ -174,13 +184,21 @@ class PlayerProgress {
   }
 
   int get coins =>
-      (completed.length + dailyStars.length + chestStars.length) * 40 +
+      (completed.length +
+              dailyStars.length +
+              chestStars.length +
+              endlessCompleted) *
+          40 +
       streakRewards.values.fold<int>(0, (sum, value) => sum + value) -
       boardThemes
           .where((theme) => themes.contains(theme.id))
           .fold<int>(0, (sum, theme) => sum + theme.cost);
   int get gardenPoints =>
-      (completed.length + dailyStars.length + chestStars.length) * 10 -
+      (completed.length +
+              dailyStars.length +
+              chestStars.length +
+              endlessCompleted) *
+          10 -
       gardenItems
           .where((i) => owned.contains(i.id))
           .fold(0, (sum, i) => sum + i.cost);
@@ -216,6 +234,7 @@ class PlayerProgress {
       skipped.contains(level - 1);
   Map<String, Object> toJson() => {
     'runs': runs,
+    'endlessCompleted': endlessCompleted,
     'streakRewards': streakRewards,
     'themes': themes.toList(),
     'selectedTheme': selectedTheme,
@@ -237,6 +256,10 @@ class PlayerProgress {
     'stars': bestStars.map((key, value) => MapEntry('$key', value)),
   };
   factory PlayerProgress.fromJson(Map<String, dynamic> data) => PlayerProgress(
+    endlessCompleted:
+        data['endlessCompleted'] is int && data['endlessCompleted'] >= 0
+        ? data['endlessCompleted']
+        : 0,
     review: ReviewProgress.fromJson(data['review']),
     runs: {
       for (final entry

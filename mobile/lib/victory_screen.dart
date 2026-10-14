@@ -10,6 +10,7 @@ class VictoryScreen extends StatelessWidget {
     super.key,
     required this.level,
     this.dailyLabel,
+    this.endless = false,
     required this.stars,
     required this.moves,
     required this.elapsed,
@@ -26,6 +27,7 @@ class VictoryScreen extends StatelessWidget {
   final int streakBonus;
   final bool allowReplay;
   final bool waitingForAd;
+  final bool endless;
   final String? dailyLabel;
   final Duration elapsed;
   final bool firstCompletion;
@@ -179,6 +181,8 @@ class VictoryScreen extends StatelessWidget {
                               GoldButton(
                                 label: waitingForAd
                                     ? 'Opening ad...'
+                                    : endless
+                                    ? 'Next round'
                                     : dailyLabel != null
                                     ? 'Back to home'
                                     : level < LevelCatalog.count
@@ -212,6 +216,8 @@ class VictoryScreen extends StatelessWidget {
                               Text(
                                 dailyLabel != null
                                     ? 'DAILY $dailyLabel COMPLETE'
+                                    : endless
+                                    ? 'ENDLESS ROUND $level COMPLETE'
                                     : 'LEVEL ${level.toString().padLeft(2, '0')} COMPLETE',
                                 style: const TextStyle(
                                   fontFamily: 'ArrowNovaSans',

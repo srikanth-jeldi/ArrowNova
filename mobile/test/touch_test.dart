@@ -27,6 +27,7 @@ void main() {
     tester,
   ) async {
     final p = PlayerProgress(
+      completed: {for (var n = 1; n < 10; n++) n},
       trainingCompleted: true,
       sound: false,
       music: false,
@@ -34,7 +35,7 @@ void main() {
     );
     await tester.pumpWidget(ArrowNovaApp(initialProgress: p));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Play now'));
+    await tester.tap(find.text('Continue journey'));
     await tester.pumpAndSettle();
     ArrowBoard board() => tester.widget<ArrowBoard>(find.byType(ArrowBoard));
     final game = board().game;

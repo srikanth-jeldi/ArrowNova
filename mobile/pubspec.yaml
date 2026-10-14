@@ -1,7 +1,7 @@
 name: arrownova
 description: "ArrowNova — sculpted arrow puzzles by EpitomeHub Technologies."
 publish_to: 'none'
-version: 0.2.20+22
+version: 0.2.21+23
 
 environment:
   sdk: ^3.13.3
