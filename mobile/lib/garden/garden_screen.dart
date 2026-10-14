@@ -52,7 +52,7 @@ class _GardenScreenState extends State<GardenScreen> {
               ),
               Text(
                 p.completed.length >= LevelCatalog.count
-                    ? 'A complete journey. A garden of your own.'
+                    ? '${p.completed.length} levels cleared · Your journey keeps growing'
                     : '${p.completed.length} levels cleared · Next milestone $milestone',
                 style: const TextStyle(color: muted),
               ),

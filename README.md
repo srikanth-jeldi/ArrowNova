@@ -17,6 +17,7 @@ pending. See `mobile/ios/RELEASE.md` for the native release requirements.
 - Garden decorations, milestone unlocks and earned-point purchases.
 - A gentle first 30 levels (5–30 arrows), followed by denser silhouette puzzles up to 200 arrows.
 - Endless puzzles with generated rounds, independent saved progress and earned rewards.
+- Classic journey continues automatically with generated levels 6001, 6002 and onwards after the original 6,000.
 - Default blue, green and graphite level colours, plus optional coin-unlocked themes.
 - Opt-in daily and 24-hour return reminders.
 - Experimental duel source retained separately for future development.

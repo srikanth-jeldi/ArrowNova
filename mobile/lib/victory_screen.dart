@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import 'game/puzzle.dart';
 import 'ui.dart';
 
 class VictoryScreen extends StatelessWidget {
@@ -185,9 +184,7 @@ class VictoryScreen extends StatelessWidget {
                                     ? 'Next round'
                                     : dailyLabel != null
                                     ? 'Back to home'
-                                    : level < LevelCatalog.count
-                                    ? 'Next level'
-                                    : 'Journey complete',
+                                    : 'Next level',
                                 icon: Icons.chevron_right,
                                 onPressed: waitingForAd ? null : onNext,
                               ),

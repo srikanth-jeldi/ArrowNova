@@ -89,15 +89,19 @@ class Puzzle {
 class LevelCatalog {
   static const count = 6000;
   static final Map<int, Puzzle> _cache = {};
-  static bool isHard(int level) => level > 30 && level % 10 == 0;
+  static bool isHard(int level) =>
+      level > 30 && level <= count && level % 10 == 0;
   // Introduce short, smaller puzzles first. Levels 31–800 keep released boards.
   // Later boards
   // stay at 200 arrows, with fresh seeds and a hard puzzle every tenth level.
-  static int arrowCount(int level) => level <= 30
+  static int arrowCount(int level) => level > count
+      ? EndlessCatalog.arrowCount(level)
+      : level <= 30
       ? 5 + (level.clamp(1, 30) - 1) * 25 ~/ 29
       : 30 + (level.clamp(1, 800) - 1) * 170 ~/ 799;
   static Puzzle get(int level, {bool legacy = false}) {
-    if (level < 1 || level > count) throw RangeError.range(level, 1, count);
+    if (level < 1) throw RangeError.value(level, 'level');
+    if (level > count) return EndlessCatalog.get(level);
     final key = legacy && level <= 30 ? -level : level;
     if (_cache.containsKey(key)) return _cache[key]!;
     if (_cache.length >= 24) _cache.remove(_cache.keys.first);

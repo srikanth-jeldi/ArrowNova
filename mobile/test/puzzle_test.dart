@@ -138,7 +138,7 @@ void main() {
     expect(restored.unlocked(800), isTrue);
     expect(restored.unlocked(801), isTrue);
     expect(LevelCatalog.get(6000).arrows.length, 200);
-    expect(() => LevelCatalog.get(6001), throwsRangeError);
+    expect(LevelCatalog.get(6001).level, 6001);
     final extended = PlayerProgress.fromJson(
       PlayerProgress(
         completed: {5999, 6000},

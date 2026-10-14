@@ -559,7 +559,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               child: homeTile(
                                 Icons.route_rounded,
                                 'Your journey',
-                                '${progress.completed.length} / ${LevelCatalog.count} cleared',
+                                progress.nextLevel > LevelCatalog.count
+                                    ? '${progress.completed.length} cleared · Journey continues'
+                                    : '${progress.completed.length} / ${LevelCatalog.count} cleared',
                                 levels,
                                 summary: true,
                               ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'ads.dart';
 import 'progress_store.dart';
 import '../game/chapters.dart';
+import '../game/puzzle.dart';
 import '../ui.dart';
 
 Future<bool> ensureChapter(
@@ -12,6 +13,8 @@ Future<bool> ensureChapter(
   VoidCallback save, {
   Future<HintAdResult> Function()? showAd,
 }) async {
+  // Generated continuation has no additional chapter-ad gate.
+  if (level > LevelCatalog.count) return progress.unlocked(level);
   final chapter = ChapterCatalog.of(level);
   if (progress.chapterOpen(chapter)) return true;
   if (!progress.chapterEligible(chapter)) return false;

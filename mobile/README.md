@@ -214,3 +214,9 @@ limit. Each completed round earns 40 coins and 10 garden points once; the next
 round and unfinished board persist independently of Classic and Daily progress.
 The result screen offers Next round. Default Level colours rotate blue, green
 and graphite; purchased themes still override the default palette.
+
+Classic continuation: after level 6000, Next level opens generated level 6001,
+then 6002 and onwards in the same journey. Continue journey resumes that level
+and its saved arrows. These levels retain Classic stars and one-time rewards;
+there is no extra chapter-unlock ad gate after the original 60 chapters. The
+world browser retains the original chapters and offers a continuation button.

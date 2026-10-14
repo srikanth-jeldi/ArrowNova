@@ -222,10 +222,11 @@ class PlayerProgress {
   }
 
   int get nextLevel {
-    for (var i = 1; i <= LevelCatalog.count; i++) {
-      if (!completed.contains(i) && !skipped.contains(i)) return i;
+    var level = 1;
+    while (completed.contains(level) || skipped.contains(level)) {
+      level++;
     }
-    return LevelCatalog.count;
+    return level;
   }
 
   bool unlocked(int level) =>
@@ -308,7 +309,7 @@ class PlayerProgress {
     music: data['music'] != false,
     completed: (data['completed'] as List? ?? [])
         .whereType<int>()
-        .where((n) => n >= 1 && n <= LevelCatalog.count)
+        .where((n) => n >= 1)
         .toSet(),
     dailyReminders: data['dailyReminders'] == true,
     dailyStars: {
@@ -345,8 +346,7 @@ class PlayerProgress {
     },
     bestStars: {
       for (final entry in (data['stars'] as Map? ?? {}).entries)
-        if (int.tryParse('${entry.key}') case final int level
-            when level >= 1 && level <= LevelCatalog.count)
+        if (int.tryParse('${entry.key}') case final int level when level >= 1)
           if (entry.value is int && entry.value >= 1 && entry.value <= 3)
             level: entry.value as int,
     },

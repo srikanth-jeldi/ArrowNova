@@ -20,7 +20,8 @@ class ChaptersScreen extends StatefulWidget {
 }
 
 class _ChaptersScreenState extends State<ChaptersScreen> {
-  late int selected = ChapterCatalog.of(widget.progress.nextLevel);
+  late int selected = ChapterCatalog.of(widget.progress.nextLevel)
+      .clamp(1, ChapterCatalog.count);
   bool busy = false;
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -28,6 +29,23 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
     body: ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        if (widget.progress.nextLevel >
+            ChapterCatalog.last(ChapterCatalog.count)) ...[
+          FilledButton(
+            onPressed: busy
+                ? null
+                : () async {
+                    setState(() => busy = true);
+                    try {
+                      await widget.openLevel(widget.progress.nextLevel);
+                    } finally {
+                      if (mounted) setState(() => busy = false);
+                    }
+                  },
+            child: Text('Continue Level ${widget.progress.nextLevel}'),
+          ),
+          const SizedBox(height: 16),
+        ],
         const Text(
           '60 chapters · 6,000 puzzles',
           style: TextStyle(color: gold, fontSize: 24),

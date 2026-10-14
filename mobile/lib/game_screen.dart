@@ -642,10 +642,7 @@ class _GameScreenState extends State<GameScreen>
         dailyLabel: widget.dailyDate != null
             ? '${dayKey(widget.dailyDate!)}${widget.chestIndex != null ? ' · CHEST ${widget.chestIndex! + 1}' : ''}'
             : null,
-        onNext:
-            widget.endless ||
-                widget.dailyDate == null &&
-                    game.puzzle.level < LevelCatalog.count
+        onNext: widget.endless || widget.dailyDate == null
             ? next
             : () => Navigator.pop(context),
         onReplay: restart,
@@ -1142,18 +1139,14 @@ class _GameScreenState extends State<GameScreen>
                               : 'Start Level ${widget.level}')
                         : widget.endless
                         ? 'Next round'
-                        : game.puzzle.level < LevelCatalog.count
-                        ? 'Next level'
-                        : 'Journey complete')
+                        : 'Next level')
                   : lost
                   ? 'Restart level'
                   : 'Resume',
               onPressed: tutorial
                   ? () => setState(() => tutorial = false)
                   : won
-                  ? (widget.endless || game.puzzle.level < LevelCatalog.count
-                        ? next
-                        : () => Navigator.pop(context))
+                  ? next
                   : lost
                   ? restart
                   : () => setState(() => paused = false),
