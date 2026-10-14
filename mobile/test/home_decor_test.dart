@@ -18,22 +18,27 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 400,
-              height: 400,
-              child: StatefulBuilder(
-                builder: (context, setState) => Room3DScene(
-                  progress: p,
-                  editing: true,
-                  selected: 0,
-                  onSelect: (_) {},
-                  onMove: (i, x, y) =>
-                      setState(() => p.moveGarden(i, x, y, home: true)),
-                  onSave: () => saves++,
+          body: ListView(
+            children: [
+              Center(
+                child: SizedBox(
+                  width: 400,
+                  height: 400,
+                  child: StatefulBuilder(
+                    builder: (context, setState) => Room3DScene(
+                      progress: p,
+                      editing: true,
+                      selected: 0,
+                      onSelect: (_) {},
+                      onMove: (i, x, y) =>
+                          setState(() => p.moveGarden(i, x, y, home: true)),
+                      onSave: () => saves++,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 1000),
+            ],
           ),
         ),
       ),
@@ -50,9 +55,9 @@ void main() {
     );
     expect(state.hit(local, const Size(400, 400)), 0);
     final g = await tester.startGesture(origin + local);
-    await g.moveBy(const Offset(25, 0));
+    await g.moveBy(const Offset(10, 25));
     await tester.pump();
-    await g.moveBy(const Offset(35, 0));
+    await g.moveBy(const Offset(10, 35));
     await tester.pump();
     await g.up();
     await tester.pumpAndSettle();
@@ -161,16 +166,9 @@ void main() {
       );
       await tester.tap(find.text('Decorate room'));
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.text('Regular'),
-        200,
-        scrollable: find
-            .descendant(
-              of: find.byType(ListView),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
+      // Scroll outside the 3D viewport, which intentionally owns its gestures.
+      await tester.dragFrom(const Offset(370, 790), const Offset(0, -400));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Regular'));
       await tester.tap(find.text('Regular'));
       await tester.pumpAndSettle();

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 
 import '../core/progress_store.dart';
 import 'garden_catalog.dart';
@@ -312,6 +313,16 @@ RoomMesh furnitureMesh(PlayerProgress progress) {
   return m;
 }
 
+// Own gestures starting in the viewport so the surrounding catalogue cannot
+// steal vertical drags. Pointer streams remain with Flutter's scale recognizer.
+class _RoomScaleRecognizer extends ScaleGestureRecognizer {
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    super.addAllowedPointer(event);
+    resolve(GestureDisposition.accepted);
+  }
+}
+
 class Room3DScene extends StatefulWidget {
   const Room3DScene({
     super.key,
@@ -371,69 +382,85 @@ class Room3DSceneState extends State<Room3DScene> {
             children: [
               Positioned.fill(
                 child: Listener(
-                  onPointerDown: (event) => down ??= event.localPosition,
+                  onPointerDown: (event) {
+                    down ??= event.localPosition;
+                    if (widget.editing) {
+                      final slot = hit(event.localPosition, size);
+                      if (slot != null) widget.onSelect(slot);
+                    }
+                  },
                   onPointerUp: (_) => down = null,
                   onPointerCancel: (_) => down = null,
-                  child: GestureDetector(
+                  child: RawGestureDetector(
                     key: const ValueKey('room-3d-viewport'),
                     behavior: HitTestBehavior.opaque,
-                    onTapUp: widget.editing
-                        ? (d) {
-                            final slot = hit(d.localPosition, size);
-                            if (slot != null) widget.onSelect(slot);
-                          }
-                        : null,
-                    onScaleStart: (d) {
-                      startDistance = camera.distance;
-                      moving = widget.editing && !orbit
-                          ? hit(down ?? d.localFocalPoint, size)
-                          : null;
-                      if (moving != null) widget.onSelect(moving!);
-                    },
-                    onScaleUpdate: (d) {
-                      final delta = d.focalPointDelta;
-                      if (d.pointerCount > 1) {
-                        setState(
-                          () => camera = RoomCamera(
-                            yaw: camera.yaw,
-                            pitch: camera.pitch,
-                            distance: (startDistance / d.scale).clamp(10, 23),
-                          ),
-                        );
-                      } else if (moving != null && widget.editing && !orbit) {
-                        final id = widget.progress.homePlacements[moving];
-                        final item = gardenItems.firstWhere((i) => i.id == id);
-                        final point = camera.intersect(
-                          d.localFocalPoint,
-                          size,
-                          wall: item.wall,
-                        );
-                        if (point != null) {
-                          widget.onMove(
-                            moving!,
-                            point.x / 12 + .5,
-                            item.wall
-                                ? (point.y - 1.5) / 4 + .22
-                                : point.z / 18 + .775,
-                          );
-                        }
-                      } else if (orbit || !widget.editing) {
-                        setState(
-                          () => camera = RoomCamera(
-                            yaw: (camera.yaw - delta.dx * .009) % (math.pi * 2),
-                            pitch: (camera.pitch + delta.dy * .006).clamp(
-                              .2,
-                              1.15,
-                            ),
-                            distance: camera.distance,
-                          ),
-                        );
-                      }
-                    },
-                    onScaleEnd: (_) {
-                      if (moving != null) widget.onSave();
-                      moving = null;
-                      down = null;
+                    gestures: {
+                      _RoomScaleRecognizer:
+                          GestureRecognizerFactoryWithHandlers<
+                            _RoomScaleRecognizer
+                          >(() => _RoomScaleRecognizer(), (r) {
+                            r
+                              ..onStart = (d) {
+                                startDistance = camera.distance;
+                                moving = widget.editing && !orbit
+                                    ? hit(down ?? d.localFocalPoint, size)
+                                    : null;
+                                if (moving != null) widget.onSelect(moving!);
+                              }
+                              ..onUpdate = (d) {
+                                final delta = d.focalPointDelta;
+                                if (d.pointerCount > 1) {
+                                  setState(
+                                    () => camera = RoomCamera(
+                                      yaw: camera.yaw,
+                                      pitch: camera.pitch,
+                                      distance: (startDistance / d.scale).clamp(
+                                        10,
+                                        23,
+                                      ),
+                                    ),
+                                  );
+                                } else if (moving != null &&
+                                    widget.editing &&
+                                    !orbit) {
+                                  final id =
+                                      widget.progress.homePlacements[moving];
+                                  final item = gardenItems.firstWhere(
+                                    (i) => i.id == id,
+                                  );
+                                  final point = camera.intersect(
+                                    d.localFocalPoint,
+                                    size,
+                                    wall: item.wall,
+                                  );
+                                  if (point != null) {
+                                    widget.onMove(
+                                      moving!,
+                                      point.x / 12 + .5,
+                                      item.wall
+                                          ? (point.y - 1.5) / 4 + .22
+                                          : point.z / 18 + .775,
+                                    );
+                                  }
+                                } else if (orbit || !widget.editing) {
+                                  setState(
+                                    () => camera = RoomCamera(
+                                      yaw:
+                                          (camera.yaw - delta.dx * .009) %
+                                          (math.pi * 2),
+                                      pitch: (camera.pitch + delta.dy * .006)
+                                          .clamp(.2, 1.15),
+                                      distance: camera.distance,
+                                    ),
+                                  );
+                                }
+                              }
+                              ..onEnd = (_) {
+                                if (moving != null) widget.onSave();
+                                moving = null;
+                                down = null;
+                              };
+                          }),
                     },
                     child: CustomPaint(
                       painter: Room3DPainter(
