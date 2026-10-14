@@ -190,3 +190,15 @@ rewarded hints, ad cadence, gameplay and animations). ARM64 test-ad release APK:
 0e1079c207e0d8d4c4b3c451e1d0eaf7c87908450cfccf81cda9cb0a7aff686a.
 
 Chapters: 60 worlds of 100 levels. Chapter 1 starts open. Finish/skip the preceding boundary level, then complete one explicitly chosen rewarded ad to unlock the next chapter. Unlocks persist locally; old saves retain chapters already reached. Chapter rewards reset the interstitial counter to avoid stacked ads. A rewarded skip at the boundary also opens the next chapter.
+# Puzzle notifications
+
+In Settings, enable **Puzzle reminders** and allow the phone notification
+permission. The preference survives app restarts. A daily reminder is scheduled
+for 9 AM in the phone's timezone; finishing today's daily puzzle moves that
+reminder to tomorrow. One additional, non-repeating reminder is scheduled for
+24 hours after the most recent app visit/schedule refresh. Opening the app
+refreshes it. Turning the switch off cancels both, including retired reminder
+slots from older builds. Android uses inexact alarms; device power restrictions
+or force-stop can delay/prevent delivery. Real-device delivery remains to be
+verified. This fix is newer than the released 0.2.20 artifacts and needs a new
+build before phone testing.

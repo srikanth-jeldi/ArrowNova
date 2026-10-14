@@ -73,6 +73,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   PlayerProgress progress = PlayerProgress();
   bool loading = true;
   bool openingLevel = false;
+  bool changingReminders = false;
   String? storageWarning;
   @override
   void initState() {
@@ -95,9 +96,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     if (mounted) setState(() => loading = false);
     MusicService.instance.setEnabled(progress.music);
-    progress.dailyReminders = false;
     unawaited(
-      DailyReminders.instance.sync(false, progress.dailyStars.keys.toSet()),
+      DailyReminders.instance.sync(
+        progress.dailyReminders,
+        progress.dailyStars.keys.toSet(),
+      ),
     );
     save();
   }
@@ -323,6 +326,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   },
                 ),
                 const SizedBox(height: 16),
+                SwitchListTile(
+                  title: const Text('Puzzle reminders'),
+                  subtitle: const Text(
+                    'Daily at 9 AM, plus one reminder after 24 hours away',
+                  ),
+                  value: progress.dailyReminders,
+                  onChanged: changingReminders
+                      ? null
+                      : (value) async {
+                          update(() => changingReminders = true);
+                          final allowed = widget.initialProgress != null
+                              ? true
+                              : value
+                              ? await DailyReminders.instance.enable(
+                                  progress.dailyStars.keys.toSet(),
+                                )
+                              : await DailyReminders.instance.sync(
+                                  false,
+                                  progress.dailyStars.keys.toSet(),
+                                );
+                          changingReminders = false;
+                          if (!mounted) return;
+                          if (allowed) {
+                            progress.dailyReminders = value;
+                            save();
+                          } else {
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Could not enable reminders. Allow ArrowNova notifications in phone Settings and try again.',
+                                ),
+                              ),
+                            );
+                          }
+                          if (context.mounted) update(() {});
+                        },
+                ),
                 SwitchListTile(
                   title: const Text('Game sounds'),
                   value: progress.sound,

@@ -23,6 +23,7 @@ void main() {
       final seed = PlayerProgress(
         completed: {for (var i = 1; i < 9; i++) i},
         trainingCompleted: true,
+        dailyReminders: true,
         sound: false,
         haptics: false,
         music: false,
@@ -43,6 +44,7 @@ void main() {
       }
       expect(find.byType(VictoryScreen), findsOneWidget);
       final saved = await ProgressStore().read();
+      expect(saved.dailyReminders, isTrue);
       expect(saved.completed, contains(9));
       expect(saved.runs.containsKey('classic/9'), isFalse);
       await tester.ensureVisible(find.text('Next level'));

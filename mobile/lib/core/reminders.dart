@@ -14,15 +14,24 @@ DateTime nextReminder(DateTime now, int hour, bool completedToday) {
   return day;
 }
 
+DateTime inactivityReminder(DateTime lastActive) =>
+    lastActive.add(const Duration(hours: 24));
+
 class DailyReminders {
   static final instance = DailyReminders();
   final plugin = FlutterLocalNotificationsPlugin();
   Future<bool>? _initialization;
+  Future<bool> _queue = Future.value(true);
   bool get supported =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
-  Future<bool> initialize() => _initialization ??= _initialize();
+  Future<bool> initialize() async {
+    final ready = await (_initialization ??= _initialize());
+    if (!ready) _initialization = null;
+    return ready;
+  }
+
   Future<bool> _initialize() async {
     if (!supported) return false;
     try {
@@ -40,51 +49,62 @@ class DailyReminders {
         ),
       );
       return true;
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Reminder initialization failed: $error');
       return false;
     }
   }
 
   Future<bool> enable(Set<String> completed) async {
-    if (!await initialize()) return false;
-    final allowed = defaultTargetPlatform == TargetPlatform.iOS
-        ? await plugin
-                  .resolvePlatformSpecificImplementation<
-                    IOSFlutterLocalNotificationsPlugin
-                  >()
-                  ?.requestPermissions(
-                    alert: true,
-                    badge: false,
-                    sound: true,
-                  ) ??
-              false
-        : await plugin
-                  .resolvePlatformSpecificImplementation<
-                    AndroidFlutterLocalNotificationsPlugin
-                  >()
-                  ?.requestNotificationsPermission() ??
-              false;
-    if (!allowed) return false;
-    return sync(true, completed);
+    try {
+      if (!await initialize()) return false;
+      final allowed = defaultTargetPlatform == TargetPlatform.iOS
+          ? await plugin
+                    .resolvePlatformSpecificImplementation<
+                      IOSFlutterLocalNotificationsPlugin
+                    >()
+                    ?.requestPermissions(
+                      alert: true,
+                      badge: false,
+                      sound: true,
+                    ) ??
+                false
+          : await plugin
+                    .resolvePlatformSpecificImplementation<
+                      AndroidFlutterLocalNotificationsPlugin
+                    >()
+                    ?.requestNotificationsPermission() ??
+                false;
+      if (!allowed) return false;
+      return await sync(true, completed);
+    } catch (_) {
+      return false;
+    }
   }
 
-  Future<bool> sync(bool enabled, Set<String> completed) async {
+  Future<bool> sync(bool enabled, Set<String> completed) {
+    final snapshot = Set<String>.of(completed);
+    // Permission dialogs and lifecycle callbacks may overlap. Apply the latest
+    // request last so a pending enable cannot undo a subsequent disable.
+    return _queue = _queue.then((_) => _sync(enabled, snapshot));
+  }
+
+  Future<bool> _sync(bool enabled, Set<String> completed) async {
     if (!await initialize()) return false;
     try {
       // Refresh timezone when the app resumes, including travel and DST changes.
       final zone = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(zone.identifier));
-      for (var i = 0; i < 3; i++) {
+      // Also clear the two retired afternoon/evening reminder slots.
+      for (var i = 0; i < 4; i++) {
         await plugin.cancel(id: 9100 + i);
       }
       if (!enabled) return true;
       final now = tz.TZDateTime.now(tz.local);
       final done = completed.contains(dayKey(now));
-      const hours = [9, 13, 19];
+      const hours = [9];
       const messages = [
         'Your daily arrow puzzle is ready. Take a little focus break.',
-        'A few quiet moves? Your daily challenge is waiting.',
-        'Unwind with today’s ArrowNova puzzle and grow your garden.',
       ];
       for (var i = 0; i < hours.length; i++) {
         final next = nextReminder(now, hours[i], done);
@@ -107,7 +127,7 @@ class DailyReminders {
             android: AndroidNotificationDetails(
               'daily_challenge',
               'Daily challenge reminders',
-              channelDescription: 'Optional reminders at 9 AM, 1 PM and 7 PM',
+              channelDescription: 'Optional daily puzzle reminder at 9 AM',
               importance: Importance.defaultImportance,
               priority: Priority.defaultPriority,
             ),
@@ -117,8 +137,30 @@ class DailyReminders {
           payload: 'daily',
         );
       }
+      await plugin.zonedSchedule(
+        id: 9103,
+        title: 'A little focus break?',
+        body: 'Your arrows and crystal garden are waiting. Come back for a puzzle!',
+        scheduledDate: tz.TZDateTime.from(inactivityReminder(now), tz.local),
+        notificationDetails: const NotificationDetails(
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentSound: true,
+          ),
+          android: AndroidNotificationDetails(
+            'puzzle_return',
+            'Return to your puzzle',
+            channelDescription: 'One reminder after 24 hours away',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: 'return',
+      );
       return true;
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Reminder scheduling failed: $error');
       return false;
     }
   }
