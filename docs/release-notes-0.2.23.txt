@@ -1,6 +1,7 @@
 <en-GB>
-Decorate your own home and garden with 22 collectible items, including sofas, curtains, carpets, flowers and lighting.
-Choose regular or premium decor. Arrange and drag up to 12 items in each space, with separate saved layouts.
-Unlock each premium item with 3 optional rewarded ads; progress is saved after each earned reward.
+Create your own 3D room: rotate the camera, pinch to zoom and arrange furniture.
+Explore over 200 room decor choices, including colour and finish variants for sofas, beds, curtains, carpets, lights and wall art.
+Choose regular items or unlock each premium item with 3 optional rewarded ads.
+Home and garden layouts save separately, along with your collection and ad progress.
 Includes Classic levels beyond 6,000 and recent progress-saving improvements.
 </en-GB>

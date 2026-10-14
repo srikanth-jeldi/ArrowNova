@@ -11,6 +11,8 @@ class GardenItem {
     this.scale = .20,
     this.homeOnly = false,
     this.wall = false,
+    this.model,
+    this.tint,
   });
   final String id, name, description;
   final int cost, unlock;
@@ -19,6 +21,8 @@ class GardenItem {
   final bool premium;
   final double scale;
   final bool homeOnly, wall;
+  final String? model;
+  final int? tint;
   bool get indoors =>
       homeOnly || asset != null || id == 'lantern' || id == 'flowers';
 }
@@ -31,7 +35,7 @@ class GardenPosition {
   final double x, y;
 }
 
-const gardenItems = [
+const _baseGardenItems = [
   // Keep the original six atlas-backed items first.
   GardenItem('lantern', 'First light', 0, 0, 'A warm welcome to your garden.'),
   GardenItem(
@@ -236,4 +240,81 @@ const gardenItems = [
     wall: true,
     scale: .34,
   ),
+  GardenItem(
+    'bed',
+    'Linen bed',
+    110,
+    8,
+    'A cosy bed with soft linen and oak frame.',
+    category: 'Beds',
+    homeOnly: true,
+    scale: .4,
+  ),
+  GardenItem(
+    'royal_bed',
+    'Royal upholstered bed',
+    0,
+    0,
+    'Sapphire upholstery and a gold-accented throw.',
+    category: 'Beds',
+    homeOnly: true,
+    premium: true,
+    scale: .4,
+  ),
+];
+
+// These are explicit colour/material choices, not hundreds of unique meshes.
+const roomPalettes = <(String, int)>[
+  ('Ivory', 0xFFE4D7BC),
+  ('Sage', 0xFF91AC95),
+  ('Ocean', 0xFF427C96),
+  ('Rose', 0xFFCA8D9C),
+  ('Sand', 0xFFBF9D78),
+  ('Slate', 0xFF6D7D8A),
+  ('Olive', 0xFF8C9867),
+  ('Coral', 0xFFD18D76),
+  ('Lavender', 0xFFAA9AC4),
+  ('Terracotta', 0xFFB37356),
+  ('Cloud', 0xFFDDE5E4),
+  ('Charcoal', 0xFF535B65),
+  ('Pearl', 0xFFE9DCC9),
+  ('Bronze', 0xFFA98250),
+  ('Midnight', 0xFF355576),
+  ('Emerald', 0xFF387B69),
+];
+const _roomModels = <String, String>{
+  'cream_sofa': 'sofa',
+  'chair': 'armchair',
+  'bed': 'bed',
+  'linen': 'curtains',
+  'rug': 'carpet',
+  'table': 'coffee table',
+  'lamp': 'floor lamp',
+  'painting': 'wall art',
+  'jar': 'vase',
+  'roses': 'rose planter',
+  'lavender': 'lavender planter',
+  'vase': 'lily arrangement',
+};
+final gardenItems = <GardenItem>[
+  ..._baseGardenItems,
+  for (final entry in _roomModels.entries)
+    for (var i = 0; i < roomPalettes.length; i++)
+      GardenItem(
+        'room_${entry.key}_$i',
+        '${roomPalettes[i].$1} ${entry.value}',
+        i >= 12 ? 0 : 40 + (i % 5) * 20,
+        i >= 12 ? 0 : 1 + i % 8,
+        i >= 12
+            ? 'Premium finish with rich colours and decorative details.'
+            : 'A coordinated colour choice for your room.',
+        category: _baseGardenItems
+            .firstWhere((item) => item.id == entry.key)
+            .category,
+        homeOnly: true,
+        premium: i >= 12,
+        wall: _baseGardenItems.firstWhere((item) => item.id == entry.key).wall,
+        model: entry.key,
+        tint: roomPalettes[i].$2,
+      ),
 ];

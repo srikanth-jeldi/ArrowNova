@@ -221,32 +221,32 @@ and its saved arrows. These levels retain Classic stars and one-time rewards;
 there is no extra chapter-unlock ad gate after the original 60 chapters. The
 world browser retains the original chapters and offers a continuation button.
 
-## Garden studio (0.2.23)
+## Home & garden studio (0.2.23)
 
-Twelve decorations include six new transparent sprites: roses, lavender, a jade
-jar, a wicker armchair, a sapphire sofa and a lily vase. Flowers, Pots & jars,
-Furniture, Landmarks, Owned and Premium filters help browse the collection.
-The garden supports twelve placement spots; drag placed objects to adjust their
-position. Ownership and custom positions survive restarts. Existing six spots
-and existing purchase costs retain their prior meaning.
+The garden retains its original backdrop and gains six transparent decorations,
+12 placement spots and drag-to-arrange saved positions. The home is a true
+world-space 3D cutaway room: perspective camera, 360-degree orbit, elevation,
+pinch zoom, mesh furniture, projected hit testing and floor/wall drag placement.
+Rotate view and Move items are separate modes. Both layouts persist independently.
 
-The sofa and lily vase each require three optional rewarded-ad credits. Only
-an earned SDK reward advances the selected item's counter. Dismissed, failed or
-unavailable ads leave it unchanged. A busy guard prevents parallel requests;
-each ad requires another explicit tap. Credits are saved after each earned ad,
-and the third unlocks ownership without spending garden points. No additional
-ad is required to place or move an owned item. All progress is device-local.
+The collection has 216 choices: 24 base items and 192 named colour/finish variants
+across 12 furniture families. There are 212 room-compatible choices (including
+shared garden objects), not 216 unique 3D models. Models include sofas, armchairs,
+beds, curtains, carpets, tables, lamps, wall art and planters. Categories and
+Regular/Premium/Owned filters help browse them. Carpets render beneath furniture.
+The renderer uses lightweight stylised geometry rather than photorealistic meshes.
 
-Uses the existing rewarded ad unit/service and its consent and recovery flow.
-New art was generated with built-in image_gen; prompts are recorded in
-../docs/garden-art-prompts.json. Original alpha and dimensions are retained in
-WebP assets under assets/art/garden/ (approximately 1.4 MB total).
+Regular items use garden points earned from first-time puzzle wins. Each premium
+item needs three separately opted-in earned ad rewards. Dismissals and unavailable
+ads do not grant credit. Progress saves after each reward; the third unlocks the
+item without spending points. Ownership is shared by both spaces, with no extra
+charge to place or move owned objects. All collection/layout data is device-local.
 
-Home Decor extends the shared collection to 22 items. A separate room layout
-supports regular and premium curtains, carpets, sofas, lamps and wall art, plus
-a coffee table and shared flowers/vases. Home positions and placements serialize
-separately from the garden. Wall objects are constrained to the wall, floor
-objects to the floor, and carpets render beneath furniture. Ownership and ad
-credits are shared across spaces, so there is no second unlock charge.
-Room art and ten indoor furnishings are resolution-independent CustomPainters,
-with no extra bitmap download cost. Preview: ../design/previews/home-decor.png.
+Rendering and interactions are tested in Flutter; physical-device performance
+and live rewarded-ad behaviour still require internal testing. The unchanged
+exhaustive 6000-level catalogue sweep is excluded from the focused regression run.
+
+Garden bitmap prompts: ../docs/garden-art-prompts.json. The fixed-view room
+concept and premium bitmap studies in assets/art/home/ are retained as design
+source only and are not bundled into the 3D release. Their prompts are recorded
+in ../docs/home-art-prompts.json. Preview: ../design/previews/home-3d.png.

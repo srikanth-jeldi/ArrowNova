@@ -113,7 +113,7 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(
       find.byType(MaterialApp),
-      matchesGoldenFile('../../design/previews/home-decor.png'),
+      matchesGoldenFile('../../design/previews/home-3d.png'),
     );
     await tester.tap(find.text('Garden'));
     await tester.pumpAndSettle();

@@ -200,10 +200,10 @@ class PlayerProgress {
     }
     final item = gardenItems.firstWhere((item) => item.id == placements[slot]);
     positions[slot] = GardenPosition(
-      x.clamp(.17, .83),
+      x.clamp(home ? .25 : .17, home ? .75 : .83),
       y.clamp(
-        home ? (item.wall ? .22 : .60) : .35,
-        home && item.wall ? .48 : .95,
+        home ? (item.wall ? .22 : .63) : .35,
+        home ? (item.wall ? .48 : .91) : .95,
       ),
     );
     return true;
@@ -270,8 +270,8 @@ class PlayerProgress {
       final old = homePositions[slot];
       moveGarden(
         slot,
-        old?.x ?? .5,
-        old?.y ?? (item.first.wall ? .42 : .75),
+        old?.x ?? (item.first.wall ? .5 : .26 + (slot % 4) * .16),
+        old?.y ?? (item.first.wall ? .42 : .65 + (slot ~/ 4) * .12),
         home: true,
       );
     }

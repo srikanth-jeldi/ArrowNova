@@ -1,0 +1,30 @@
+{
+  "tool": "Built-in image_gen",
+  "jobs": [
+    [
+      "room",
+      "Use case: game environment. Create a square realistic elegant empty living room interior for a mobile interior decorating game. Straight-on view with slightly elevated camera, back wall meets floor at exactly 55 percent image height, wide oak parquet floor fills lower 45 percent. Muted warm ivory panelled walls, soft daylight. One centered rectangular window between x32-68 percent and y8-40 percent, white trim, trees visible outside. Completely unfurnished, no curtains, no rug, no lamps, no objects, no text, no watermark. Symmetrical clean scene, beautiful high-end architectural visualization, calm blue cream gold palette. Full bleed square image.",
+      false
+    ],
+    [
+      "velvet",
+      "Single premium mobile interior decorating game sprite: pair of luxurious teal velvet curtains with golden tiebacks and gold rod, front view, parted wide in the middle so the center is entirely transparent. Entire rod and both drapes visible. Realistic fabric folds and satin highlights, elegant architectural visualization, clean silhouette. Fills 85 percent of square image, transparent background, no window, no wall, no furniture, no text. Paired curtains are one object.",
+      true
+    ],
+    [
+      "carpet",
+      "Single premium mobile home decorating game sprite: luxurious oval sapphire-blue Persian carpet with intricate delicate gold medallion and floral border, seen from elevated three-quarter frontal view, ellipse flattened by perspective, ratio width to visible height about 2.2. Realistic woven texture, elegant architectural visualization. Whole rug visible centered in square canvas, transparent background, no floor, no furniture, no text. Rug width fills 90 percent canvas, vertically centered around 60 percent.",
+      true
+    ],
+    [
+      "crystal",
+      "Single premium mobile home decorating game sprite: elegant tall gold floor lamp with sparkling crystal fringe and cream silk shade. Realistic architectural visualization, slightly elevated three-quarter front view. Entire stand and base visible, centered fills 85 percent of square canvas. Transparent background, tiny soft contact shadow only, no room, no floor, no text.",
+      true
+    ],
+    [
+      "gallery",
+      "Single premium mobile home decorating game sprite: coordinated set of three elegant gold framed blue-and-gold abstract landscape artworks, middle frame slightly taller, arranged side by side as one wall decoration. Realistic architectural visualization, straight-on front view. Entire frames visible, centered fills 85 percent of square canvas width. Transparent background, no wall, no room, no text.",
+      true
+    ]
+  ]
+}

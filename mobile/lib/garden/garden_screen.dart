@@ -4,7 +4,7 @@ import '../core/ads.dart';
 import '../core/progress_store.dart';
 import '../ui.dart';
 import 'garden_catalog.dart';
-import 'home_art.dart';
+import 'room_3d.dart';
 
 class GardenScreen extends StatefulWidget {
   const GardenScreen({
@@ -144,16 +144,26 @@ class _GardenScreenState extends State<GardenScreen> {
                         }),
                 ),
                 const SizedBox(height: 14),
-                GardenScene(
-                  home: home,
-                  progress: p,
-                  editing: editing && !adBusy,
-                  selected: slot,
-                  onSelect: (value) => setState(() => slot = value),
-                  onMove: (index, x, y) =>
-                      setState(() => p.moveGarden(index, x, y, home: home)),
-                  onMoveEnd: widget.onChanged,
-                ),
+                if (home)
+                  Room3DScene(
+                    progress: p,
+                    editing: editing && !adBusy,
+                    selected: slot,
+                    onSelect: (value) => setState(() => slot = value),
+                    onMove: (index, x, y) =>
+                        setState(() => p.moveGarden(index, x, y, home: true)),
+                    onSave: widget.onChanged,
+                  )
+                else
+                  GardenScene(
+                    progress: p,
+                    editing: editing && !adBusy,
+                    selected: slot,
+                    onSelect: (value) => setState(() => slot = value),
+                    onMove: (index, x, y) =>
+                        setState(() => p.moveGarden(index, x, y, home: home)),
+                    onMoveEnd: widget.onChanged,
+                  ),
                 const SizedBox(height: 14),
                 OutlinedButton.icon(
                   onPressed: adBusy
@@ -179,6 +189,25 @@ class _GardenScreenState extends State<GardenScreen> {
                     ),
                   ),
                 if (editing) ...[
+                  if (home) ...[
+                    const Text(
+                      'Swipe to rotate the room. Pinch to zoom. Choose Move items to drag furniture; wall decor stays on the back wall.',
+                      style: TextStyle(color: muted),
+                    ),
+                    Wrap(
+                      spacing: 6,
+                      children: [
+                        for (var i = 0; i < gardenSlotCount; i++)
+                          ChoiceChip(
+                            label: Text('${i + 1}'),
+                            selected: slot == i,
+                            onSelected: adBusy
+                                ? null
+                                : (_) => setState(() => slot = i),
+                          ),
+                      ],
+                    ),
+                  ],
                   Row(
                     children: [
                       Expanded(
@@ -216,6 +245,7 @@ class _GardenScreenState extends State<GardenScreen> {
                             'Rugs',
                             'Lighting',
                             'Wall art',
+                            'Beds',
                           ],
                           'Premium',
                           'Regular',
@@ -269,7 +299,9 @@ class _GardenScreenState extends State<GardenScreen> {
                 SizedBox(
                   width: 82,
                   height: 86,
-                  child: GardenDecoration(item.id),
+                  child: home
+                      ? CustomPaint(painter: RoomItemPainter(item))
+                      : GardenDecoration(item.id),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -377,24 +409,17 @@ class GardenScene extends StatelessWidget {
     required this.onSelect,
     required this.onMove,
     required this.onMoveEnd,
-    this.home = false,
   });
   final PlayerProgress progress;
-  final bool home;
-  Map<int, String> get placements =>
-      home ? progress.homePlacements : progress.placements;
+  Map<int, String> get placements => progress.placements;
   final bool editing;
   final int selected;
   final ValueChanged<int> onSelect;
   final void Function(int, double, double) onMove;
   final VoidCallback onMoveEnd;
   Offset position(int i) {
-    final saved = (home ? progress.homePositions : progress.gardenPositions)[i];
-    return saved == null
-        ? home
-              ? Offset(.22 + (i % 4) * .18, .64 + (i ~/ 4) * .13)
-              : gardenSlots[i]
-        : Offset(saved.x, saved.y);
+    final saved = progress.gardenPositions[i];
+    return saved == null ? gardenSlots[i] : Offset(saved.x, saved.y);
   }
 
   @override
@@ -417,13 +442,11 @@ class GardenScene extends StatelessWidget {
             key: const ValueKey('garden-scene'),
             children: [
               Positioned.fill(
-                child: home
-                    ? const CustomPaint(painter: HomeRoomPainter())
-                    : Image.asset(
-                        'assets/art/garden-courtyard.webp',
-                        fit: BoxFit.cover,
-                        cacheWidth: 1000,
-                      ),
+                child: Image.asset(
+                  'assets/art/garden-courtyard.webp',
+                  fit: BoxFit.cover,
+                  cacheWidth: 1000,
+                ),
               ),
               for (final i in ordered)
                 (() {
@@ -508,12 +531,12 @@ class GardenDecoration extends StatelessWidget {
   Widget build(BuildContext context) {
     final index = gardenItems.indexWhere((item) => item.id == id);
     if (index < 0) return const SizedBox.shrink();
-    if (gardenItems[index].homeOnly) {
-      return CustomPaint(painter: HomeItemPainter(id));
-    }
     final asset = gardenItems[index].asset;
     if (asset != null) {
       return Image.asset(asset, fit: BoxFit.contain, cacheWidth: 320);
+    }
+    if (gardenItems[index].homeOnly) {
+      return CustomPaint(painter: RoomItemPainter(gardenItems[index]));
     }
     return AspectRatio(
       aspectRatio: 1,
