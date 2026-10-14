@@ -220,3 +220,24 @@ then 6002 and onwards in the same journey. Continue journey resumes that level
 and its saved arrows. These levels retain Classic stars and one-time rewards;
 there is no extra chapter-unlock ad gate after the original 60 chapters. The
 world browser retains the original chapters and offers a continuation button.
+
+## Garden studio (0.2.23)
+
+Twelve decorations include six new transparent sprites: roses, lavender, a jade
+jar, a wicker armchair, a sapphire sofa and a lily vase. Flowers, Pots & jars,
+Furniture, Landmarks, Owned and Premium filters help browse the collection.
+The garden supports twelve placement spots; drag placed objects to adjust their
+position. Ownership and custom positions survive restarts. Existing six spots
+and existing purchase costs retain their prior meaning.
+
+The sofa and lily vase each require three optional rewarded-ad credits. Only
+an earned SDK reward advances the selected item's counter. Dismissed, failed or
+unavailable ads leave it unchanged. A busy guard prevents parallel requests;
+each ad requires another explicit tap. Credits are saved after each earned ad,
+and the third unlocks ownership without spending garden points. No additional
+ad is required to place or move an owned item. All progress is device-local.
+
+Uses the existing rewarded ad unit/service and its consent and recovery flow.
+New art was generated with built-in image_gen; prompts are recorded in
+../docs/garden-art-prompts.json. Original alpha and dimensions are retained in
+WebP assets under assets/art/garden/ (approximately 1.4 MB total).
