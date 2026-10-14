@@ -1,0 +1,39 @@
+ArrowNova 0.2.21+23 — 14 October 2026
+Source commit: cecbea1 (pushed to main)
+
+Included: first 30 Classic levels reduced to 5–30 arrows, legacy unfinished
+layout preservation, separate persistent Endless mode, rotating default arrow
+colours, opt-in daily and 24-hour return reminders. Includes earlier save/ad
+recovery changes. Existing garden art and Classic levels 31–6000 are retained.
+
+Validation:
+- flutter analyze: no issues.
+- 88 tests pass with the unchanged full dense-catalog sweep excluded.
+- Additional Home-to-Endless round 6001 integration test passes (89 total).
+- First 30 layouts checked for bounds, overlap, connectivity and solvability.
+- 203 sampled Endless rounds, including 6001 and 100000, checked for solvability.
+- Unfinished Endless resume, next-round transition and one-time rewards verified.
+- Updated UI goldens inspected for beginner gameplay and arrow colours.
+- APK: signature, ZIP integrity, version 0.2.21 (split ABI code 2023), ARM64,
+  all three test ad IDs and new feature strings verified.
+- Play AAB: version 0.2.21 (code 23), upload signature and bundletool validation
+  verified; all three ABI libraries include live ad IDs and new feature strings.
+- Raw and compact AAB contain 410 byte-identical runtime entries.
+
+Build limitation: Flutter reported its post-build native-symbol stripping error.
+The fresh Gradle AAB passed bundletool validation. The existing compact-bundle
+tool detached diagnostics, re-signed it and the compact AAB passed validation.
+Native symbols, R8 mapping and Dart symbols are retained under
+mobile/build/release-diagnostics/0.2.21+23/.
+
+APK: 23,439,271 bytes (22.4 MiB)
+SHA256 f87ebfca2c8d2aa802a5ae799b7ba83d869f6315d98ac52ad64797f6ae617d32
+AAB: 28,066,319 bytes (26.8 MiB)
+SHA256 93e29099b7e951d096b83b7fc1a33756336318e547427aaa8607f828c1ce4336
+
+Physical-device testing and Play upload are not performed. Use Internal testing
+to update a Play-installed copy while retaining its progress. The sideload APK
+uses the local test signing key and test ads; it cannot replace a differently
+signed Play install. Do not uninstall the Play copy just to install this APK.
+Reminder permission/delivery and real-device backgrounding should be checked;
+inexact alarms may be delayed by Android power restrictions.
