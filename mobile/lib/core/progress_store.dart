@@ -23,6 +23,8 @@ class PlayerProgress {
     Set<String>? owned,
     Map<int, String>? placements,
     Map<int, GardenPosition>? gardenPositions,
+    Map<int, String>? homePlacements,
+    Map<int, GardenPosition>? homePositions,
     Map<String, int>? gardenAdCredits,
     Map<int, int>? bestStars,
     this.trainingCompleted = false,
@@ -50,6 +52,8 @@ class PlayerProgress {
        owned = {...?owned, 'lantern'},
        placements = placements ?? {},
        gardenPositions = gardenPositions ?? {},
+       homePlacements = homePlacements ?? {},
+       homePositions = homePositions ?? {},
        gardenAdCredits = gardenAdCredits ?? {},
        bestStars = bestStars ?? {},
        runs = runs ?? {},
@@ -174,6 +178,8 @@ class PlayerProgress {
   final Set<String> owned;
   final Map<int, String> placements;
   final Map<int, GardenPosition> gardenPositions;
+  final Map<int, String> homePlacements;
+  final Map<int, GardenPosition> homePositions;
   final Map<String, int> gardenAdCredits;
   int gardenCredits(String id) => gardenAdCredits[id] ?? 0;
   // Called once after an earned reward, never for dismissals or no inventory.
@@ -186,13 +192,19 @@ class PlayerProgress {
     return true;
   }
 
-  bool moveGarden(int slot, double x, double y) {
+  bool moveGarden(int slot, double x, double y, {bool home = false}) {
+    final placements = home ? homePlacements : this.placements;
+    final positions = home ? homePositions : gardenPositions;
     if (!placements.containsKey(slot) || !x.isFinite || !y.isFinite) {
       return false;
     }
-    gardenPositions[slot] = GardenPosition(
+    final item = gardenItems.firstWhere((item) => item.id == placements[slot]);
+    positions[slot] = GardenPosition(
       x.clamp(.17, .83),
-      y.clamp(.35, .95),
+      y.clamp(
+        home ? (item.wall ? .22 : .60) : .35,
+        home && item.wall ? .48 : .95,
+      ),
     );
     return true;
   }
@@ -243,12 +255,26 @@ class PlayerProgress {
     return owned.add(id);
   }
 
-  bool place(String id, int slot) {
+  bool place(String id, int slot, {bool home = false}) {
+    final placements = home ? homePlacements : this.placements;
+    final item = gardenItems.where((item) => item.id == id);
+    if (item.isEmpty || (home ? !item.first.indoors : item.first.homeOnly)) {
+      return false;
+    }
     if (!owned.contains(id) || slot < 0 || slot >= gardenSlotCount) {
       return false;
     }
     placements.removeWhere((key, value) => value == id);
     placements[slot] = id;
+    if (home) {
+      final old = homePositions[slot];
+      moveGarden(
+        slot,
+        old?.x ?? .5,
+        old?.y ?? (item.first.wall ? .42 : .75),
+        home: true,
+      );
+    }
     return true;
   }
 
@@ -288,6 +314,12 @@ class PlayerProgress {
     'gardenPositions': gardenPositions.map(
       (key, value) => MapEntry('$key', [value.x, value.y]),
     ),
+    'homePlacements': homePlacements.map(
+      (key, value) => MapEntry('$key', value),
+    ),
+    'homePositions': homePositions.map(
+      (key, value) => MapEntry('$key', [value.x, value.y]),
+    ),
     'gardenAdCredits': gardenAdCredits,
     'stars': bestStars.map((key, value) => MapEntry('$key', value)),
   };
@@ -301,6 +333,20 @@ class PlayerProgress {
         if (gardenItems.any((item) => item.id == entry.key && item.premium) &&
             entry.value is int)
           entry.key as String: (entry.value as int).clamp(0, gardenPremiumAds),
+    },
+    homePositions: {
+      for (final entry
+          in (data['homePositions'] is Map ? data['homePositions'] as Map : {})
+              .entries)
+        if (int.tryParse('${entry.key}') case final int slot
+            when slot >= 0 && slot < gardenSlotCount)
+          if (entry.value is List &&
+              (entry.value as List).length == 2 &&
+              (entry.value as List).every((v) => v is num && v.isFinite))
+            slot: GardenPosition(
+              (entry.value[0] as num).toDouble().clamp(.17, .83),
+              (entry.value[1] as num).toDouble().clamp(.22, .95),
+            ),
     },
     gardenPositions: {
       for (final entry
@@ -396,6 +442,18 @@ class PlayerProgress {
         .whereType<String>()
         .where((id) => gardenItems.any((i) => i.id == id))
         .toSet(),
+    homePlacements: {
+      for (final entry in (data['homePlacements'] as Map? ?? {}).entries)
+        if (int.tryParse('${entry.key}') case final int slot
+            when slot >= 0 && slot < gardenSlotCount)
+          if (entry.value is String &&
+              gardenItems.any(
+                (item) => item.id == entry.value && item.indoors,
+              ) &&
+              (entry.value == 'lantern' ||
+                  (data['owned'] as List? ?? []).contains(entry.value)))
+            slot: entry.value as String,
+    },
     placements: {
       for (final entry in (data['placements'] as Map? ?? {}).entries)
         if (int.tryParse('${entry.key}') case final int slot

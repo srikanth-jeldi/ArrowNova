@@ -4,6 +4,7 @@ import '../core/ads.dart';
 import '../core/progress_store.dart';
 import '../ui.dart';
 import 'garden_catalog.dart';
+import 'home_art.dart';
 
 class GardenScreen extends StatefulWidget {
   const GardenScreen({
@@ -30,7 +31,7 @@ class _GardenScreenState extends State<GardenScreen> {
   void placeItem(GardenItem item, {bool buy = false}) {
     change(() {
       if (!buy || widget.progress.buy(item.id)) {
-        widget.progress.place(item.id, slot);
+        widget.progress.place(item.id, slot, home: home);
       }
     });
     if (scroll.hasClients) {
@@ -42,6 +43,9 @@ class _GardenScreenState extends State<GardenScreen> {
     }
   }
 
+  bool home = false;
+  Map<int, String> get placements =>
+      home ? widget.progress.homePlacements : widget.progress.placements;
   int slot = 0;
   bool editing = false;
   bool adBusy = false;
@@ -74,7 +78,7 @@ class _GardenScreenState extends State<GardenScreen> {
         content: Text(
           result == HintAdResult.earned
               ? p.owned.contains(item.id)
-                    ? '${item.name} unlocked! Place it in your garden.'
+                    ? '${item.name} unlocked! Place it in your space.'
                     : '${p.gardenCredits(item.id)}/$gardenPremiumAds saved for ${item.name}.'
               : result == HintAdResult.dismissed
               ? 'Ad not completed. Your saved progress is unchanged.'
@@ -84,12 +88,15 @@ class _GardenScreenState extends State<GardenScreen> {
     );
   }
 
-  bool visible(GardenItem item) => switch (category) {
-    'All' => true,
-    'Owned' => widget.progress.owned.contains(item.id),
-    'Premium' => item.premium,
-    _ => item.category == category,
-  };
+  bool visible(GardenItem item) =>
+      (home ? item.indoors : !item.homeOnly) &&
+      switch (category) {
+        'All' => true,
+        'Owned' => widget.progress.owned.contains(item.id),
+        'Premium' => item.premium,
+        'Regular' => !item.premium,
+        _ => item.category == category,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +104,7 @@ class _GardenScreenState extends State<GardenScreen> {
     return PopScope(
       canPop: !adBusy,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Your garden')),
+        appBar: AppBar(title: const Text('Home & garden')),
         body: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 620),
@@ -110,17 +117,41 @@ class _GardenScreenState extends State<GardenScreen> {
                   style: const TextStyle(color: gold, fontSize: 27),
                 ),
                 Text(
-                  '${p.owned.length}/${gardenItems.length} decorations collected · ${p.placements.length}/$gardenSlotCount placed',
+                  '${p.owned.length}/${gardenItems.length} decorations collected · ${placements.length}/$gardenSlotCount placed',
                   style: const TextStyle(color: muted),
                 ),
                 const SizedBox(height: 14),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(
+                      value: false,
+                      label: Text('Garden'),
+                      icon: Icon(Icons.yard_outlined),
+                    ),
+                    ButtonSegment(
+                      value: true,
+                      label: Text('Home Decor'),
+                      icon: Icon(Icons.chair_outlined),
+                    ),
+                  ],
+                  selected: {home},
+                  onSelectionChanged: adBusy
+                      ? null
+                      : (values) => setState(() {
+                          home = values.single;
+                          slot = 0;
+                          category = 'All';
+                        }),
+                ),
+                const SizedBox(height: 14),
                 GardenScene(
+                  home: home,
                   progress: p,
                   editing: editing && !adBusy,
                   selected: slot,
                   onSelect: (value) => setState(() => slot = value),
                   onMove: (index, x, y) =>
-                      setState(() => p.moveGarden(index, x, y)),
+                      setState(() => p.moveGarden(index, x, y, home: home)),
                   onMoveEnd: widget.onChanged,
                 ),
                 const SizedBox(height: 14),
@@ -131,13 +162,19 @@ class _GardenScreenState extends State<GardenScreen> {
                   icon: Icon(
                     editing ? Icons.check_rounded : Icons.edit_outlined,
                   ),
-                  label: Text(editing ? 'Done decorating' : 'Decorate garden'),
+                  label: Text(
+                    editing
+                        ? 'Done decorating'
+                        : home
+                        ? 'Decorate room'
+                        : 'Decorate garden',
+                  ),
                 ),
                 if (!editing)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Text(
-                      'Create your own garden retreat with flowers, jars and furniture. Collect pieces, then arrange them your way.',
+                      'Create your own home and garden with flowers, curtains and furniture. Both layouts save separately; unlocked pieces work in either space.',
                       style: TextStyle(color: muted, height: 1.5),
                     ),
                   ),
@@ -151,8 +188,8 @@ class _GardenScreenState extends State<GardenScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: !adBusy && p.placements.containsKey(slot)
-                            ? () => change(() => p.placements.remove(slot))
+                        onPressed: !adBusy && placements.containsKey(slot)
+                            ? () => change(() => placements.remove(slot))
                             : null,
                         child: const Text('Remove'),
                       ),
@@ -173,8 +210,15 @@ class _GardenScreenState extends State<GardenScreen> {
                           'Flowers',
                           'Pots & jars',
                           'Furniture',
-                          'Landmarks',
+                          if (!home) 'Landmarks',
+                          if (home) ...[
+                            'Curtains',
+                            'Rugs',
+                            'Lighting',
+                            'Wall art',
+                          ],
                           'Premium',
+                          'Regular',
                         ])
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
@@ -333,16 +377,24 @@ class GardenScene extends StatelessWidget {
     required this.onSelect,
     required this.onMove,
     required this.onMoveEnd,
+    this.home = false,
   });
   final PlayerProgress progress;
+  final bool home;
+  Map<int, String> get placements =>
+      home ? progress.homePlacements : progress.placements;
   final bool editing;
   final int selected;
   final ValueChanged<int> onSelect;
   final void Function(int, double, double) onMove;
   final VoidCallback onMoveEnd;
   Offset position(int i) {
-    final saved = progress.gardenPositions[i];
-    return saved == null ? gardenSlots[i] : Offset(saved.x, saved.y);
+    final saved = (home ? progress.homePositions : progress.gardenPositions)[i];
+    return saved == null
+        ? home
+              ? Offset(.22 + (i % 4) * .18, .64 + (i ~/ 4) * .13)
+              : gardenSlots[i]
+        : Offset(saved.x, saved.y);
   }
 
   @override
@@ -352,22 +404,31 @@ class GardenScene extends StatelessWidget {
       borderRadius: BorderRadius.circular(28),
       child: LayoutBuilder(
         builder: (context, box) {
-          final ordered = progress.placements.keys.toList()
-            ..sort((a, b) => position(a).dy.compareTo(position(b).dy));
+          final ordered = placements.keys.toList()
+            ..sort((a, b) {
+              final aRug =
+                  placements[a] == 'rug' || placements[a] == 'royal_rug';
+              final bRug =
+                  placements[b] == 'rug' || placements[b] == 'royal_rug';
+              if (aRug != bRug) return aRug ? -1 : 1;
+              return position(a).dy.compareTo(position(b).dy);
+            });
           return Stack(
             key: const ValueKey('garden-scene'),
             children: [
               Positioned.fill(
-                child: Image.asset(
-                  'assets/art/garden-courtyard.webp',
-                  fit: BoxFit.cover,
-                  cacheWidth: 1000,
-                ),
+                child: home
+                    ? const CustomPaint(painter: HomeRoomPainter())
+                    : Image.asset(
+                        'assets/art/garden-courtyard.webp',
+                        fit: BoxFit.cover,
+                        cacheWidth: 1000,
+                      ),
               ),
               for (final i in ordered)
                 (() {
                   final item = gardenItems.firstWhere(
-                    (item) => item.id == progress.placements[i],
+                    (item) => item.id == placements[i],
                   );
                   final point = position(i);
                   final width = box.maxWidth * item.scale;
@@ -447,6 +508,9 @@ class GardenDecoration extends StatelessWidget {
   Widget build(BuildContext context) {
     final index = gardenItems.indexWhere((item) => item.id == id);
     if (index < 0) return const SizedBox.shrink();
+    if (gardenItems[index].homeOnly) {
+      return CustomPaint(painter: HomeItemPainter(id));
+    }
     final asset = gardenItems[index].asset;
     if (asset != null) {
       return Image.asset(asset, fit: BoxFit.contain, cacheWidth: 320);

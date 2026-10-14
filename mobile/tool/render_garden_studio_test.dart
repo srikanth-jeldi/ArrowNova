@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:arrownova/core/progress_store.dart';
 import 'package:arrownova/garden/garden_screen.dart';
+import 'package:arrownova/garden/garden_catalog.dart';
 
 void main() {
   testWidgets('render decorated garden and premium collection', (tester) async {
@@ -18,7 +19,38 @@ void main() {
     }
     final p = PlayerProgress(
       completed: {for (var n = 1; n <= 100; n++) n},
-      owned: {'roses', 'lavender', 'jar', 'chair', 'sofa'},
+      owned: {
+        'roses',
+        'lavender',
+        'jar',
+        'chair',
+        'sofa',
+        'curtains',
+        'royal_rug',
+        'table',
+        'crystal_lamp',
+        'gallery',
+      },
+      homePlacements: {
+        0: 'curtains',
+        1: 'royal_rug',
+        2: 'sofa',
+        3: 'chair',
+        4: 'crystal_lamp',
+        5: 'table',
+        6: 'roses',
+        7: 'gallery',
+      },
+      homePositions: {
+        0: const GardenPosition(.5, .46),
+        1: const GardenPosition(.5, .90),
+        2: const GardenPosition(.5, .68),
+        3: const GardenPosition(.23, .8),
+        4: const GardenPosition(.80, .64),
+        5: const GardenPosition(.52, .84),
+        6: const GardenPosition(.82, .89),
+        7: const GardenPosition(.80, .35),
+      },
       gardenAdCredits: {'sofa': 3, 'vase': 1},
       placements: {
         0: 'roses',
@@ -77,7 +109,17 @@ void main() {
       find.byType(MaterialApp),
       matchesGoldenFile('../../design/previews/garden-studio.png'),
     );
+    await tester.tap(find.text('Home Decor'));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('../../design/previews/home-decor.png'),
+    );
+    await tester.tap(find.text('Garden'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Decorate garden'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -250));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Premium'));
     await tester.tap(find.text('Premium'));

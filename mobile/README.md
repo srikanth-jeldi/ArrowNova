@@ -241,3 +241,12 @@ Uses the existing rewarded ad unit/service and its consent and recovery flow.
 New art was generated with built-in image_gen; prompts are recorded in
 ../docs/garden-art-prompts.json. Original alpha and dimensions are retained in
 WebP assets under assets/art/garden/ (approximately 1.4 MB total).
+
+Home Decor extends the shared collection to 22 items. A separate room layout
+supports regular and premium curtains, carpets, sofas, lamps and wall art, plus
+a coffee table and shared flowers/vases. Home positions and placements serialize
+separately from the garden. Wall objects are constrained to the wall, floor
+objects to the floor, and carpets render beneath furniture. Ownership and ad
+credits are shared across spaces, so there is no second unlock charge.
+Room art and ten indoor furnishings are resolution-independent CustomPainters,
+with no extra bitmap download cost. Preview: ../design/previews/home-decor.png.

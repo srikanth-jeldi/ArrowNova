@@ -75,6 +75,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Decorate garden'));
       await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, -250));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Premium'));
       await tester.tap(find.text('Premium'));
       await tester.pumpAndSettle();

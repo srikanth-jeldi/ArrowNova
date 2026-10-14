@@ -607,7 +607,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       const SizedBox(height: 14),
                       homeTile(
                         Icons.park_outlined,
-                        'Your garden',
+                        'Home & garden',
                         '${progress.gardenPoints} points to grow',
                         openGarden,
                       ),
