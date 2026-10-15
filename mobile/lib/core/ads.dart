@@ -8,11 +8,23 @@ import 'music_service.dart';
 import 'ad_pacing.dart';
 import 'ad_session.dart';
 
+/// Native cleanup must not leave an unhandled asynchronous platform error.
+Future<void> disposeAdSafely(Ad? ad) async {
+  try {
+    await ad?.dispose();
+  } catch (error) {
+    debugPrint('ArrowNova ad cleanup: $error');
+  }
+}
+
 enum HintAdResult { earned, dismissed, unavailable }
 
 /// Local builds use test inventory; LIVE_ADS is an explicit publishing switch.
-class GameAds {
-  GameAds._();
+class GameAds with WidgetsBindingObserver {
+  GameAds._() : _now = DateTime.now;
+  @visibleForTesting
+  GameAds.forTesting({DateTime Function()? now}) : _now = now ?? DateTime.now;
+  final DateTime Function() _now;
   static final instance = GameAds._();
   static const liveAds = bool.fromEnvironment('LIVE_ADS');
   static bool get ios => defaultTargetPlatform == TargetPlatform.iOS;
@@ -46,6 +58,49 @@ class GameAds {
       _loading = false,
       _showing = false;
   int _consentEpoch = 0;
+  Timer? _recovery;
+  bool _foreground = true, _consentBusy = false, _consentFormOpen = false;
+  DateTime? _consentRequestedAt, _rewardRequestedAt, _breakRequestedAt;
+  int _rewardRequest = 0, _breakRequest = 0;
+
+  void _scheduleRecovery() {
+    _recovery?.cancel();
+    if (!_foreground) return;
+    _recovery = Timer(const Duration(seconds: 30), () {
+      if (!ready.value) {
+        unawaited(initialize());
+      } else {
+        final now = _now();
+        if (_rewardLoading &&
+            _rewardRequestedAt != null &&
+            now.difference(_rewardRequestedAt!) >= const Duration(minutes: 6)) {
+          _rewardRequest++;
+          _rewardLoading = false;
+        }
+        if (_loading &&
+            _breakRequestedAt != null &&
+            now.difference(_breakRequestedAt!) >= const Duration(minutes: 6)) {
+          _breakRequest++;
+          _loading = false;
+        }
+        unawaited(preload());
+        unawaited(preloadReward());
+      }
+      _scheduleRecovery();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (_foreground) {
+      if (!ready.value) unawaited(initialize());
+      _scheduleRecovery();
+    } else {
+      _recovery?.cancel();
+    }
+  }
+
   final _pacing = AdPacing();
 
   bool get canShowBreakNow =>
@@ -54,12 +109,12 @@ class GameAds {
       _pacing.canShowInterstitial &&
       _interstitial != null &&
       _loadedAt != null &&
-      DateTime.now().difference(_loadedAt!) <= const Duration(minutes: 55);
+      _now().difference(_loadedAt!) <= const Duration(minutes: 55);
 
   void deferAutomaticAds() => _pacing.fullscreenClosed();
 
   Future<void> initialize() async {
-    if (_started ||
+    if (ready.value ||
         kIsWeb ||
         (!ios && defaultTargetPlatform != TargetPlatform.android)) {
       return;
@@ -70,24 +125,53 @@ class GameAds {
         [iosBanner, iosInterstitial, iosRewarded].any((id) => id.isEmpty)) {
       return;
     }
-    _started = true;
+    if (!_started) {
+      _started = true;
+      WidgetsBinding.instance.addObserver(this);
+      _scheduleRecovery();
+    }
+    if (!_foreground ||
+        _consentFormOpen ||
+        (_consentBusy &&
+            _consentRequestedAt != null &&
+            _now().difference(_consentRequestedAt!) <
+                const Duration(seconds: 30))) {
+      return;
+    }
+    _consentBusy = true;
+    _consentRequestedAt = _now();
     try {
       ConsentInformation.instance.requestConsentInfoUpdate(
         ConsentRequestParameters(),
-        () => unawaited(_gatherConsent()),
-        (_) => unawaited(_refreshConsent()),
+        () {
+          _consentBusy = false;
+          if (_foreground) unawaited(_gatherConsent());
+        },
+        (error) {
+          _consentBusy = false;
+          debugPrint(
+            'ArrowNova consent update: ${error.errorCode} ${error.message}',
+          );
+          unawaited(_refreshConsent());
+        },
       );
-    } catch (_) {
+    } catch (error) {
+      _consentBusy = false;
+      debugPrint("ArrowNova consent initialization: $error");
       // Offline/SDK failure never prevents playing.
     }
   }
 
   Future<void> _gatherConsent() async {
+    if (_consentFormOpen) return;
+    _consentFormOpen = true;
     try {
       await ConsentForm.loadAndShowConsentFormIfRequired((_) {
+        _consentFormOpen = false;
         unawaited(_refreshConsent());
       });
     } catch (_) {
+      _consentFormOpen = false;
       await _refreshConsent();
     }
   }
@@ -102,16 +186,18 @@ class GameAds {
       if (!allowed) {
         ready.value = false;
         _consentEpoch++;
-        _interstitial?.dispose();
+        disposeAdSafely(_interstitial);
         _interstitial = null;
-        _rewarded?.dispose();
+        disposeAdSafely(_rewarded);
         _rewarded = null;
         return;
       }
       if (!ready.value && !_initializing) {
         _initializing = true;
         try {
-          await MobileAds.instance.initialize();
+          await MobileAds.instance.initialize().timeout(
+            const Duration(seconds: 15),
+          );
           ready.value = true;
         } finally {
           _initializing = false;
@@ -119,30 +205,53 @@ class GameAds {
       }
       preload();
       preloadReward();
-    } catch (_) {
+    } catch (error) {
+      debugPrint("ArrowNova ads initialization: $error");
       // No consent/no connection: continue without ads.
     }
   }
 
   Future<void> privacyOptions() async {
+    if (_consentFormOpen) return;
+    _consentFormOpen = true;
     ready.value = false;
     _consentEpoch++;
-    _interstitial?.dispose();
+    disposeAdSafely(_interstitial);
     _interstitial = null;
-    _rewarded?.dispose();
+    disposeAdSafely(_rewarded);
     _rewarded = null;
     try {
-      await ConsentForm.showPrivacyOptionsForm(
-        (_) => unawaited(_refreshConsent()),
-      );
+      await ConsentForm.showPrivacyOptionsForm((_) {
+        _consentFormOpen = false;
+        unawaited(_refreshConsent());
+      });
     } catch (_) {
+      _consentFormOpen = false;
       await _refreshConsent();
     }
   }
 
   Future<void> preload() async {
-    if (!ready.value || _loading || _interstitial != null || _showing) return;
+    if (!_foreground || !ready.value || _showing) return;
+    // Refresh stale inventory before the next level break needs it.
+    if (_interstitial != null &&
+        (_loadedAt == null ||
+            _now().difference(_loadedAt!) > const Duration(minutes: 55))) {
+      final expired = _interstitial;
+      _interstitial = null;
+      _loadedAt = null;
+      unawaited(disposeAdSafely(expired));
+    }
+    if (!_foreground ||
+        !ready.value ||
+        _loading ||
+        _interstitial != null ||
+        _showing) {
+      return;
+    }
     _loading = true;
+    _breakRequestedAt = _now();
+    final request = ++_breakRequest;
     final epoch = _consentEpoch;
     try {
       await InterstitialAd.load(
@@ -150,27 +259,54 @@ class GameAds {
         request: const AdRequest(),
         adLoadCallback: InterstitialAdLoadCallback(
           onAdLoaded: (ad) {
+            if (request != _breakRequest) {
+              disposeAdSafely(ad);
+              return;
+            }
             _loading = false;
             if (!ready.value || epoch != _consentEpoch) {
-              ad.dispose();
+              disposeAdSafely(ad);
               return;
             }
             _interstitial = ad;
-            _loadedAt = DateTime.now();
+            _loadedAt = _now();
           },
-          onAdFailedToLoad: (_) {
+          onAdFailedToLoad: (error) {
+            if (request != _breakRequest) return;
+            debugPrint(
+              'ArrowNova interstitial load: ${error.code} ${error.domain} ${error.message}',
+            );
             _loading = false;
           },
         ),
       );
-    } catch (_) {
-      _loading = false;
+    } catch (error) {
+      if (request == _breakRequest) _loading = false;
+      debugPrint('ArrowNova interstitial request: $error');
     }
   }
 
   Future<void> preloadReward() async {
-    if (!ready.value || _rewardLoading || _rewarded != null || _showing) return;
+    if (!_foreground || !ready.value || _showing) return;
+    // A hint request should not be the first time expired inventory is noticed.
+    if (_rewarded != null &&
+        (_rewardedAt == null ||
+            _now().difference(_rewardedAt!) > const Duration(minutes: 55))) {
+      final expired = _rewarded;
+      _rewarded = null;
+      _rewardedAt = null;
+      unawaited(disposeAdSafely(expired));
+    }
+    if (!_foreground ||
+        !ready.value ||
+        _rewardLoading ||
+        _rewarded != null ||
+        _showing) {
+      return;
+    }
     _rewardLoading = true;
+    _rewardRequestedAt = _now();
+    final request = ++_rewardRequest;
     final epoch = _consentEpoch;
     try {
       await RewardedAd.load(
@@ -178,36 +314,45 @@ class GameAds {
         request: const AdRequest(),
         rewardedAdLoadCallback: RewardedAdLoadCallback(
           onAdLoaded: (ad) {
+            if (request != _rewardRequest) {
+              disposeAdSafely(ad);
+              return;
+            }
             _rewardLoading = false;
             if (!ready.value || epoch != _consentEpoch) {
-              ad.dispose();
+              disposeAdSafely(ad);
               return;
             }
             _rewarded = ad;
-            _rewardedAt = DateTime.now();
+            _rewardedAt = _now();
           },
-          onAdFailedToLoad: (_) {
+          onAdFailedToLoad: (error) {
+            if (request != _rewardRequest) return;
+            debugPrint(
+              'ArrowNova rewarded load: ${error.code} ${error.domain} ${error.message}',
+            );
             _rewardLoading = false;
           },
         ),
       );
-    } catch (_) {
-      _rewardLoading = false;
+    } catch (error) {
+      if (request == _rewardRequest) _rewardLoading = false;
+      debugPrint('ArrowNova rewarded request: $error');
     }
   }
 
   Future<HintAdResult> showHintAd() async {
-    if (_showing) return HintAdResult.unavailable;
+    if (!_foreground || _showing) return HintAdResult.unavailable;
     final ad = _rewarded;
     _rewarded = null;
     if (!ready.value || ad == null) {
-      ad?.dispose();
+      disposeAdSafely(ad);
       unawaited(preloadReward());
       return HintAdResult.unavailable;
     }
     if (_rewardedAt == null ||
-        DateTime.now().difference(_rewardedAt!) > const Duration(minutes: 55)) {
-      ad.dispose();
+        _now().difference(_rewardedAt!) > const Duration(minutes: 55)) {
+      disposeAdSafely(ad);
       unawaited(preloadReward());
       return HintAdResult.unavailable;
     }
@@ -219,7 +364,7 @@ class GameAds {
     var failed = false;
     void finish() {
       if (done.isCompleted) return;
-      ad.dispose();
+      disposeAdSafely(ad);
       _showing = false;
       if (shown || earned) _pacing.fullscreenClosed();
       MusicService.instance.setAd(false);
@@ -267,16 +412,17 @@ class GameAds {
 
   /// Never waits for inventory and never shows a late ad during a puzzle.
   Future<void> showAtBreak() async {
-    if (_showing || !_pacing.canShowInterstitial) return;
+    if (!_foreground || _showing || !_pacing.canShowInterstitial) return;
     final ad = _interstitial;
     _interstitial = null;
     if (!ready.value || ad == null) {
+      disposeAdSafely(ad);
       unawaited(preload());
       return;
     }
     if (_loadedAt == null ||
-        DateTime.now().difference(_loadedAt!) > const Duration(minutes: 55)) {
-      ad.dispose();
+        _now().difference(_loadedAt!) > const Duration(minutes: 55)) {
+      disposeAdSafely(ad);
       unawaited(preload());
       return;
     }
@@ -286,7 +432,7 @@ class GameAds {
     var shown = false;
     void finish() {
       if (done.isCompleted) return;
-      ad.dispose();
+      disposeAdSafely(ad);
       _showing = false;
       if (shown) _pacing.fullscreenClosed();
       MusicService.instance.setAd(false);
@@ -339,23 +485,58 @@ class _BannerSlot extends StatefulWidget {
   State<_BannerSlot> createState() => _BannerSlotState();
 }
 
-class _BannerSlotState extends State<_BannerSlot> {
+class _BannerSlotState extends State<_BannerSlot> with WidgetsBindingObserver {
+  Timer? retry;
+  bool foreground = true;
   BannerAd? ad;
   bool loaded = false;
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    createBanner();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    foreground = state == AppLifecycleState.resumed;
+    if (!foreground) {
+      retry?.cancel();
+    } else if (ad == null) {
+      createBanner();
+    }
+  }
+
+  void scheduleRetry() {
+    retry?.cancel();
+    if (mounted && foreground) {
+      retry = Timer(const Duration(seconds: 30), createBanner);
+    }
+  }
+
+  void createBanner() {
+    if (!mounted || !foreground || ad != null) return;
     ad = BannerAd(
       size: AdSize.banner,
       adUnitId: GameAds.bannerId,
       request: const AdRequest(),
       listener: BannerAdListener(
-        onAdLoaded: (_) {
-          if (mounted) setState(() => loaded = true);
+        onAdLoaded: (loadedAd) {
+          if (mounted && identical(ad, loadedAd)) {
+            setState(() => loaded = true);
+          }
         },
-        onAdFailedToLoad: (failed, _) {
-          failed.dispose();
-          ad = null;
+        onAdFailedToLoad: (failed, error) {
+          debugPrint(
+            'ArrowNova banner load: ${error.code} ${error.domain} ${error.message}',
+          );
+          disposeAdSafely(failed);
+          if (!mounted || !identical(ad, failed)) return;
+          setState(() {
+            ad = null;
+            loaded = false;
+          });
+          scheduleRetry();
         },
       ),
     );
@@ -366,14 +547,17 @@ class _BannerSlotState extends State<_BannerSlot> {
     try {
       await ad?.load();
     } catch (_) {
-      ad?.dispose();
+      disposeAdSafely(ad);
       ad = null;
+      scheduleRetry();
     }
   }
 
   @override
   void dispose() {
-    ad?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    retry?.cancel();
+    disposeAdSafely(ad);
     super.dispose();
   }
 
