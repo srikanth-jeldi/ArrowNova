@@ -42,7 +42,6 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     for (final font in {
-      'ArrowNovaSerif': 'assets/fonts/CormorantGaramond.ttf',
       'ArrowNovaSans': 'assets/fonts/Roboto-Regular.ttf',
       'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
     }.entries) {

@@ -18,7 +18,7 @@ class _AssetOutput implements FeedbackOutput {
   Future<void>? _ready;
   Future<void> _prepare() => _ready ??= _initialize();
   Future<void> _initialize() async {
-    _player = AudioPlayer();
+    _player = AudioPlayer()..positionUpdater = null;
     await _player!.setAudioContext(
       AudioContext(
         android: const AudioContextAndroid(audioFocus: AndroidAudioFocus.none),
@@ -81,11 +81,14 @@ class FeedbackService {
     if (_disposed) return Future.value();
     if (haptics) {
       unawaited(
-        event == 'lost'
-            ? HapticFeedback.heavyImpact()
-            : event == 'blocked'
-            ? HapticFeedback.mediumImpact()
-            : HapticFeedback.lightImpact(),
+        (event == 'lost'
+                ? HapticFeedback.heavyImpact()
+                : event == 'blocked'
+                ? HapticFeedback.mediumImpact()
+                : HapticFeedback.lightImpact())
+            .catchError((Object error) {
+              debugPrint('ArrowNova haptics: $error');
+            }),
       );
     }
     if (!sound || (event != 'win' && _celebrating)) return Future.value();
@@ -130,9 +133,13 @@ class FeedbackService {
     _onCelebration(false);
     _queue = _queue
         .then((_) async {
-          await _effects.stop();
-          await _victory.stop();
-          await _warnings.stop();
+          for (final output in [_effects, _victory, _warnings]) {
+            try {
+              await output.stop();
+            } catch (error) {
+              debugPrint('ArrowNova audio stop: $error');
+            }
+          }
         })
         .catchError((Object error) {
           debugPrint('ArrowNova audio stop: $error');
@@ -141,13 +148,22 @@ class FeedbackService {
   }
 
   void dispose() {
+    if (_disposed) return;
     _disposed = true;
     unawaited(
-      stop().then((_) async {
-        await _effects.dispose();
-        await _victory.dispose();
-        await _warnings.dispose();
-      }),
+      stop()
+          .then((_) async {
+            for (final output in [_effects, _victory, _warnings]) {
+              try {
+                await output.dispose();
+              } catch (error) {
+                debugPrint('ArrowNova audio dispose: $error');
+              }
+            }
+          })
+          .catchError((Object error) {
+            debugPrint('ArrowNova audio dispose: $error');
+          }),
     );
   }
 }

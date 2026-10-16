@@ -113,9 +113,9 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(
       find.byType(MaterialApp),
-      matchesGoldenFile('../../design/previews/home-3d.png'),
+      matchesGoldenFile('../../design/previews/home-studio-empty.png'),
     );
-    await tester.tap(find.text('Garden'));
+    await tester.tap(find.byTooltip('Back to garden'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Decorate garden'));
     await tester.pumpAndSettle();

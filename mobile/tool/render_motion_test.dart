@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +19,9 @@ void main() {
       'ArrowNovaSans': 'assets/fonts/Roboto-Regular.ttf',
       'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
     }.entries) {
-      await (FontLoader(font.key)..addFont(rootBundle.load(font.value))).load();
+      await (FontLoader(
+        font.key,
+      )..addFont(_loadPreviewFont(font.value))).load();
     }
     await tester.pumpWidget(
       ArrowNovaApp(
@@ -73,3 +77,9 @@ void main() {
     }
   });
 }
+
+// The legacy serif is preview-only; it is not shipped in the app.
+Future<ByteData> _loadPreviewFont(String path) =>
+    path.endsWith('CormorantGaramond.ttf')
+    ? Future.value(ByteData.sublistView(File(path).readAsBytesSync()))
+    : rootBundle.load(path);

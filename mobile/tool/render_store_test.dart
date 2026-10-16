@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
@@ -18,7 +20,9 @@ void main() {
       'ArrowNovaSans': 'assets/fonts/Roboto-Regular.ttf',
       'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
     }.entries) {
-      await (FontLoader(font.key)..addFont(rootBundle.load(font.value))).load();
+      await (FontLoader(
+        font.key,
+      )..addFont(_loadPreviewFont(font.value))).load();
     }
     final boundary = GlobalKey();
     Future<void> capture(String name) async {
@@ -127,7 +131,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await (FontLoader(
       'ArrowNovaSerif',
-    )..addFont(rootBundle.load('assets/fonts/CormorantGaramond.ttf'))).load();
+    )..addFont(_loadPreviewFont('assets/fonts/CormorantGaramond.ttf'))).load();
     await (FontLoader(
       'ArrowNovaSans',
     )..addFont(rootBundle.load('assets/fonts/Roboto-Regular.ttf'))).load();
@@ -215,3 +219,9 @@ void main() {
     );
   });
 }
+
+// The legacy serif is preview-only; it is not shipped in the app.
+Future<ByteData> _loadPreviewFont(String path) =>
+    path.endsWith('CormorantGaramond.ttf')
+    ? Future.value(ByteData.sublistView(File(path).readAsBytesSync()))
+    : rootBundle.load(path);

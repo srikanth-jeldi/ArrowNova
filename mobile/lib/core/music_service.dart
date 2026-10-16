@@ -5,6 +5,10 @@ import 'package:flutter/widgets.dart';
 
 /// A single quiet loop, muted during ads and whenever the app leaves foreground.
 class MusicService with WidgetsBindingObserver {
+  MusicService({AudioPlayer Function()? createPlayer})
+    : _createPlayer = createPlayer ?? AudioPlayer.new;
+  final AudioPlayer Function() _createPlayer;
+  Future<void> get settled => _queue;
   static final instance = MusicService();
   AudioPlayer? _player;
   bool _celebrating = false;
@@ -15,23 +19,28 @@ class MusicService with WidgetsBindingObserver {
       WidgetsBinding.instance.addObserver(this);
       _observing = true;
     }
+    if (_enabled == enabled) return;
     _enabled = enabled;
     _sync();
   }
 
   void setCelebrating(bool celebrating) {
+    if (_celebrating == celebrating) return;
     _celebrating = celebrating;
     _sync();
   }
 
   void setAd(bool showing) {
+    if (_ad == showing) return;
     _ad = showing;
     _sync();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _foreground = state == AppLifecycleState.resumed;
+    final foreground = state == AppLifecycleState.resumed;
+    if (_foreground == foreground) return;
+    _foreground = foreground;
     _sync();
   }
 
@@ -39,11 +48,14 @@ class MusicService with WidgetsBindingObserver {
     _queue = _queue.then((_) async {
       try {
         if (!_enabled || !_foreground || _ad) {
-          await _player?.pause();
+          if (_player?.state == PlayerState.playing) await _player?.pause();
           return;
         }
         if (_player == null) {
-          _player = AudioPlayer();
+          _player = _createPlayer();
+          // No playback scrubber: avoid per-frame native position queries.
+          // Repeated resume used to start overlapping frame polling loops.
+          _player!.positionUpdater = null;
           await _player!.setAudioContext(
             AudioContext(
               iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
@@ -56,7 +68,7 @@ class MusicService with WidgetsBindingObserver {
           );
         } else {
           await _player!.setVolume(_celebrating ? .025 : .24);
-          await _player!.resume();
+          if (_player!.state != PlayerState.playing) await _player!.resume();
         }
       } catch (_) {
         /* Audio never blocks a puzzle. */

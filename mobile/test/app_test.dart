@@ -33,7 +33,6 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
     for (final font in {
-      'ArrowNovaSerif': 'assets/fonts/CormorantGaramond.ttf',
       'ArrowNovaSans': 'assets/fonts/Roboto-Regular.ttf',
       'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
     }.entries) {
@@ -97,7 +96,7 @@ void main() {
         board().onTap(id);
         if (id == solution.last) {
           await tester.pump();
-          await tester.pump(const Duration(milliseconds: 510));
+          await tester.pump(const Duration(milliseconds: 900));
           await tester.pump(const Duration(milliseconds: 150));
           expect(
             find.byKey(const ValueKey('board-golden-wave')),
@@ -255,6 +254,13 @@ void main() {
           onReplay: () {},
           onHome: () {},
         ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => precacheImage(
+        const AssetImage('assets/art/victory-garden.webp'),
+        tester.element(find.byType(VictoryScreen)),
       ),
     );
     await tester.pumpAndSettle();

@@ -37,6 +37,14 @@ void main() {
     messenger.setMockMethodCallHandler(notifications, null);
   });
 
+  test('Android legacy Calcutta timezone schedules reminders', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(timezone, (_) async => 'Asia/Calcutta');
+    expect(await DailyReminders().enable({}), isTrue);
+    expect(tz.local.name, 'Asia/Calcutta');
+    expect(calls.where((c) => c.method == 'zonedSchedule').length, 2);
+  });
+
   test('permission denial does not schedule notifications', () async {
     permission = false;
     expect(await DailyReminders().enable({}), isFalse);

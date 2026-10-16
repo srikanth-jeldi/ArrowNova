@@ -5,6 +5,62 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:arrownova/core/progress_store.dart';
 
 void main() {
+  test('read failure never overwrites an existing save', () async {
+    var unavailable = true;
+    var writes = 0;
+    final original = jsonEncode(PlayerProgress(completed: {1, 2, 3}).toJson());
+    final store = ProgressStore(
+      read: () async {
+        if (unavailable) throw StateError('keystore unavailable');
+        return original;
+      },
+      write: (_) async {
+        writes++;
+      },
+    );
+    await expectLater(store.read(), throwsStateError);
+    await expectLater(store.save(PlayerProgress()), throwsStateError);
+    expect(writes, 0);
+    unavailable = false;
+    final recovered = await store.read();
+    expect(recovered.completed, {1, 2, 3});
+    await store.save(recovered);
+    expect(writes, 1);
+  });
+
+  test(
+    'invalid JSON stays on disk rather than becoming a blank save',
+    () async {
+      var writes = 0;
+      final store = ProgressStore(
+        read: () async => '{broken',
+        write: (_) async {
+          writes++;
+        },
+      );
+      await expectLater(store.read(), throwsFormatException);
+      await expectLater(store.save(PlayerProgress()), throwsStateError);
+      expect(writes, 0);
+    },
+  );
+
+  test('malformed optional collections preserve valid level progress', () {
+    for (final bad in [7, 'bad', true]) {
+      final progress = PlayerProgress.fromJson({
+        'completed': [1, 2],
+        'skipped': bad,
+        'owned': bad,
+        'placements': bad,
+        'homePlacements': bad,
+        'stars': bad,
+      });
+      expect(progress.completed, {1, 2});
+      expect(progress.skipped, isEmpty);
+      expect(progress.bestStars, isEmpty);
+    }
+    expect(PlayerProgress.fromJson({'completed': 'bad'}).completed, isEmpty);
+  });
+
   test('failed older write retries the newest completed checkpoint', () async {
     final firstWrite = Completer<void>();
     final writes = <String>[];

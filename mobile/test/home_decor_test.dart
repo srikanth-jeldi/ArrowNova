@@ -119,83 +119,19 @@ void main() {
     },
   );
 
-  testWidgets(
-    'room offers regular and premium decor and renders carpet underneath furniture',
-    (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final p = PlayerProgress(
-        owned: {'chair', 'rug', 'linen', 'lamp'},
-        homePlacements: {0: 'chair', 1: 'rug', 2: 'linen', 3: 'lamp'},
-      );
-      p.moveGarden(2, .5, .43, home: true);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: GardenScreen(progress: p, onChanged: () {}),
-        ),
-      );
-      await tester.tap(find.text('Home Decor'));
-      await tester.pumpAndSettle();
-      expect(find.text('Decorate room'), findsOneWidget);
-      final state = tester.state<Room3DSceneState>(find.byType(Room3DScene));
-      final before = state.camera.project(
-        const Vec3(2, 1, 0),
-        const Size(350, 350),
-      );
-      final gesture = await tester.startGesture(
-        tester.getCenter(find.byKey(const ValueKey('room-3d-viewport'))),
-      );
-      await gesture.moveBy(const Offset(30, 0));
-      await tester.pump();
-      await gesture.moveBy(const Offset(70, 0));
-      await gesture.up();
-      await tester.pumpAndSettle();
-      expect(
-        state.camera.project(const Vec3(2, 1, 0), const Size(350, 350)),
-        isNot(before),
-      );
-      final faces = furnitureMesh(p).faces;
-      expect(
-        faces
-            .where((f) => f.slot == 1)
-            .expand((f) => f.points)
-            .every((v) => v.y < .1),
-        isTrue,
-      );
-      await tester.tap(find.text('Decorate room'));
-      await tester.pumpAndSettle();
-      // Scroll outside the 3D viewport, which intentionally owns its gestures.
-      await tester.dragFrom(const Offset(370, 790), const Offset(0, -400));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Regular'));
-      await tester.tap(find.text('Regular'));
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('garden-action-royal_rug')),
-        findsNothing,
-      );
-      await tester.ensureVisible(find.text('Premium'));
-      await tester.tap(find.text('Premium'));
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('garden-action-royal_rug')),
-        250,
-        scrollable: find
-            .descendant(
-              of: find.byType(ListView),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      expect(
-        find.byKey(const ValueKey('garden-action-royal_rug')),
-        findsOneWidget,
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('home entry opens the fixed-view 2D studio', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GardenScreen(progress: PlayerProgress(), onChanged: () {}),
+      ),
+    );
+    await tester.tap(find.text('Home Decor'));
+    await tester.pumpAndSettle();
+    expect(find.text('Home studio'), findsOneWidget);
+    expect(find.byKey(const ValueKey('decor-room-scene')), findsOneWidget);
+    expect(find.byType(Room3DScene), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   test('3D camera ground projection round-trips at different angles and catalogue variants persist', () {
     for (final yaw in [0.0, 1.5, 3.1, 4.5, 6.2]) {
       final c = RoomCamera(yaw: yaw);

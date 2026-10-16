@@ -9,6 +9,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../game/puzzle.dart';
 import '../game/board_themes.dart';
 import '../garden/garden_catalog.dart';
+import '../garden/decor_collection.dart';
 
 class PlayerProgress {
   PlayerProgress({
@@ -37,6 +38,7 @@ class PlayerProgress {
     this.selectedTheme = 'crystal',
     this.endlessCompleted = 0,
     ReviewProgress? review,
+    HomeDecorProgress? homeDecor,
   }) : completed = completed ?? {},
        chapters = {
          1,
@@ -59,7 +61,9 @@ class PlayerProgress {
        runs = runs ?? {},
        streakRewards = streakRewards ?? {},
        themes = {'crystal', ...?themes},
-       review = review ?? ReviewProgress();
+       review = review ?? ReviewProgress(),
+       homeDecor = homeDecor ?? HomeDecorProgress();
+  final HomeDecorProgress homeDecor;
   final ReviewProgress review;
   final Map<String, Map<String, dynamic>> runs;
   final Map<String, int> streakRewards;
@@ -118,8 +122,8 @@ class PlayerProgress {
     // Existing players keep every chapter already reached before chapter gates.
     var reached = 1;
     for (final n in [
-      ...(data['completed'] as List? ?? []),
-      ...(data['skipped'] as List? ?? []),
+      ...(data['completed'] is List ? data['completed'] as List : []),
+      ...(data['skipped'] is List ? data['skipped'] as List : []),
     ].whereType<int>()) {
       if (n >= 1 && n <= LevelCatalog.count) {
         final chapter = ChapterCatalog.of((n + 1).clamp(1, LevelCatalog.count));
@@ -291,6 +295,7 @@ class PlayerProgress {
       completed.contains(level - 1) ||
       skipped.contains(level - 1);
   Map<String, Object> toJson() => {
+    'homeDecor2D': homeDecor.toJson(),
     'runs': runs,
     'endlessCompleted': endlessCompleted,
     'streakRewards': streakRewards,
@@ -324,6 +329,7 @@ class PlayerProgress {
     'stars': bestStars.map((key, value) => MapEntry('$key', value)),
   };
   factory PlayerProgress.fromJson(Map<String, dynamic> data) => PlayerProgress(
+    homeDecor: HomeDecorProgress.fromJson(data['homeDecor2D']),
     gardenAdCredits: {
       for (final entry
           in (data['gardenAdCredits'] is Map
@@ -397,7 +403,7 @@ class PlayerProgress {
         ? boardTheme(data['selectedTheme']).id
         : 'crystal',
     chapters: _readChapters(data),
-    skipped: (data['skipped'] as List? ?? [])
+    skipped: (data['skipped'] is List ? data['skipped'] as List : [])
         .whereType<int>()
         .where((n) => n >= 1 && n < LevelCatalog.count)
         .toSet(),
@@ -414,7 +420,7 @@ class PlayerProgress {
           entry.key as String: entry.value as int,
     },
     music: data['music'] != false,
-    completed: (data['completed'] as List? ?? [])
+    completed: (data['completed'] is List ? data['completed'] as List : [])
         .whereType<int>()
         .where((n) => n >= 1)
         .toSet(),
@@ -438,12 +444,16 @@ class PlayerProgress {
         : 0,
     sound: data['sound'] != false,
     haptics: data['haptics'] != false,
-    owned: (data['owned'] as List? ?? [])
+    owned: (data['owned'] is List ? data['owned'] as List : [])
         .whereType<String>()
         .where((id) => gardenItems.any((i) => i.id == id))
         .toSet(),
     homePlacements: {
-      for (final entry in (data['homePlacements'] as Map? ?? {}).entries)
+      for (final entry
+          in (data['homePlacements'] is Map
+                  ? data['homePlacements'] as Map
+                  : {})
+              .entries)
         if (int.tryParse('${entry.key}') case final int slot
             when slot >= 0 && slot < gardenSlotCount)
           if (entry.value is String &&
@@ -451,21 +461,28 @@ class PlayerProgress {
                 (item) => item.id == entry.value && item.indoors,
               ) &&
               (entry.value == 'lantern' ||
-                  (data['owned'] as List? ?? []).contains(entry.value)))
+                  (data['owned'] is List ? data['owned'] as List : []).contains(
+                    entry.value,
+                  )))
             slot: entry.value as String,
     },
     placements: {
-      for (final entry in (data['placements'] as Map? ?? {}).entries)
+      for (final entry
+          in (data['placements'] is Map ? data['placements'] as Map : {})
+              .entries)
         if (int.tryParse('${entry.key}') case final int slot
             when slot >= 0 && slot < gardenSlotCount)
           if (entry.value is String &&
               gardenItems.any((item) => item.id == entry.value) &&
               (entry.value == 'lantern' ||
-                  (data['owned'] as List? ?? []).contains(entry.value)))
+                  (data['owned'] is List ? data['owned'] as List : []).contains(
+                    entry.value,
+                  )))
             slot: entry.value as String,
     },
     bestStars: {
-      for (final entry in (data['stars'] as Map? ?? {}).entries)
+      for (final entry
+          in (data['stars'] is Map ? data['stars'] as Map : {}).entries)
         if (int.tryParse('${entry.key}') case final int level when level >= 1)
           if (entry.value is int && entry.value >= 1 && entry.value <= 3)
             level: entry.value as int,
@@ -476,20 +493,40 @@ class PlayerProgress {
 /// Uses the same secure-storage approach as ChessVerse AuthSessionStore,
 /// with an ArrowNova-only namespace and no production account connections.
 class ProgressStore {
-  ProgressStore({Future<void> Function(String)? write})
-    : _write = write ?? ((value) => _storage.write(key: _key, value: value));
+  ProgressStore({
+    Future<void> Function(String)? write,
+    Future<String?> Function()? read,
+  }) : _write = write ?? ((value) => _storage.write(key: _key, value: value)),
+       _read = read ?? (() => _storage.read(key: _key));
   static const _storage = FlutterSecureStorage();
   static const _key = 'arrownova.progress.v1';
   final Future<void> Function(String) _write;
+  final Future<String?> Function() _read;
+  bool _readFailed = false;
   String? _pending;
   Future<void>? _writing;
   Future<PlayerProgress> read() async {
-    final value = await _storage.read(key: _key);
-    if (value == null) return PlayerProgress();
-    return PlayerProgress.fromJson(jsonDecode(value) as Map<String, dynamic>);
+    try {
+      final value = await _read().timeout(const Duration(seconds: 8));
+      final progress = value == null
+          ? PlayerProgress()
+          : PlayerProgress.fromJson(jsonDecode(value) as Map<String, dynamic>);
+      _readFailed = false;
+      return progress;
+    } catch (_) {
+      // A temporary read failure must never replace an existing save with a
+      // fresh session. A successful subsequent read is required to unlock writes.
+      _readFailed = true;
+      rethrow;
+    }
   }
 
   Future<void> save(PlayerProgress progress) {
+    if (_readFailed) {
+      return Future.error(
+        StateError('Existing progress could not be read; save preserved.'),
+      );
+    }
     // Capture immutable JSON now. While storage is busy, retain only the newest
     // checkpoint so a win is not stuck behind hundreds of obsolete arrow saves.
     _pending = jsonEncode(progress.toJson());

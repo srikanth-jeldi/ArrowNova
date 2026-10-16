@@ -1,3 +1,5 @@
+import 'package:arrownova/game/board_celebration.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -44,10 +46,21 @@ void main() {
     }
     tester.widget<ArrowBoard>(find.byType(ArrowBoard)).onTap(solution.last);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byType(BoardWinCelebration), findsOneWidget);
+    expect(find.byType(ArrowBoard), findsOneWidget);
+    expect(find.byType(VictoryScreen), findsNothing);
+    expect(progress.completed, contains(5));
+    expect(adCalls, 0);
+    await tester.pump(const Duration(milliseconds: 1500));
+    expect(find.byType(BoardWinCelebration), findsOneWidget);
+    expect(find.byType(VictoryScreen), findsNothing);
+    expect(adCalls, 0);
+    await tester.pump(const Duration(milliseconds: 550));
     await tester.pump();
     expect(find.byType(VictoryScreen), findsOneWidget);
+    expect(find.byType(BoardWinCelebration), findsNothing);
     expect(progress.completed, contains(5));
     expect(progress.runs.containsKey('classic/5'), isFalse);
     expect(adCalls, 1);

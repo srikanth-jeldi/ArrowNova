@@ -1,0 +1,5 @@
+<en-GB>
+• Get a gentle reminder when a new update is available, with Update and Later options.
+• Enjoy colourful fireworks and happy reactions after completing a puzzle.
+• Improved blocked-arrow animations and game stability.
+</en-GB>

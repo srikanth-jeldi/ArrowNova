@@ -344,7 +344,7 @@ class _VictoryPraiseState extends State<VictoryPraise>
           final opacity = min(fadeIn, fadeOut);
           final pulse = sin(max(0.0, seconds - 1.6) * pi * 6);
           final (symbol, label) = switch (widget.stars) {
-            3 => ('', 'Perfect!'),
+            3 => ('\u{1F31F}', 'Perfect!'),
             2 => ('👍', 'Well done!'),
             _ => ('✨', 'Nice solve!'),
           };
@@ -367,27 +367,26 @@ class _VictoryPraiseState extends State<VictoryPraise>
               ),
               if (opacity > 0)
                 Positioned(
-                  top: widget.stars == 3 ? 0 : -7,
+                  top: -7,
                   child: Opacity(
                     key: const ValueKey('victory-praise'),
                     opacity: opacity,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (widget.stars != 3)
-                          ExcludeSemantics(
-                            child: Transform.rotate(
-                              angle: widget.stars == 3 ? pulse * .1 : 0,
-                              child: Transform.scale(
-                                scale: 1 + pulse * .07,
-                                child: Text(
-                                  symbol,
-                                  style: const TextStyle(fontSize: 24),
-                                ),
+                        ExcludeSemantics(
+                          child: Transform.rotate(
+                            angle: widget.stars == 3 ? pulse * .1 : 0,
+                            child: Transform.scale(
+                              scale: 1 + pulse * .07,
+                              child: Text(
+                                symbol,
+                                style: const TextStyle(fontSize: 24),
                               ),
                             ),
                           ),
-                        if (widget.stars != 3) const SizedBox(width: 7),
+                        ),
+                        const SizedBox(width: 7),
                         Text(
                           label,
                           style: const TextStyle(

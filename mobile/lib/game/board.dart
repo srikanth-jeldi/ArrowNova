@@ -5,6 +5,7 @@ import 'package:flutter/semantics.dart';
 
 import 'puzzle.dart';
 import 'board_themes.dart';
+import 'board_celebration.dart';
 
 class ArrowBoard extends StatelessWidget {
   const ArrowBoard({
@@ -65,6 +66,10 @@ class ArrowBoard extends StatelessWidget {
                   child: CustomPaint(
                     key: const ValueKey('board-golden-wave'),
                     painter: GoldenWavePainter(celebration),
+                    child: BoardWinCelebration(
+                      progress: celebration,
+                      stars: (3 - game.mistakes).clamp(1, 3),
+                    ),
                   ),
                 ),
               ),
@@ -183,11 +188,17 @@ class ArrowPainter extends CustomPainter {
       if (game.removed.contains(arrow.id) && arrow.id != activeId) continue;
       canvas.save();
       final isError = arrow.id == activeId && blocked;
-      if (isError && !reducedMotion) {
-        final direction = arrow.direction;
-        final bounce =
-            sin(progress * pi * 2) * geometry.step * .14 * (1 - progress);
-        canvas.translate(direction.x * bounce, direction.y * bounce);
+      final exiting = arrow.id == activeId && !blocked;
+      if (exiting && reducedMotion) {
+        // Honour the device's reduced-motion preference with a short fade,
+        // rather than teleporting the arrow off screen on the first frame.
+        canvas.saveLayer(
+          Offset.zero & size,
+          Paint()
+            ..color = Colors.white.withValues(
+              alpha: 1 - progress.clamp(0.0, 1.0),
+            ),
+        );
       }
       final path = Path()
         ..moveTo(
@@ -204,25 +215,40 @@ class ArrowPainter extends CustomPainter {
         arrow.direction.x.toDouble(),
         arrow.direction.y.toDouble(),
       );
-      if (arrow.id == activeId && !blocked) {
-        final originalLength = path.computeMetrics().first.length;
-        final travel =
-            Curves.easeInCubic.transform(reducedMotion ? 1 : progress) *
-            (originalLength + max(size.width, size.height) * 1.3);
-        head += dir * travel;
-        path.lineTo(head.dx, head.dy);
-        visible = path.computeMetrics().first.extractPath(
-          travel,
-          originalLength + travel,
+      if (exiting && !reducedMotion) {
+        final motion = ArrowExitFrame.sample(
+          path,
+          head,
+          dir,
+          size,
+          geometry.step,
+          progress,
         );
+        visible = motion.body;
+        head = motion.head;
       }
-      if (arrow.id == activeId && !blocked && !reducedMotion && progress > 0) {
-        final metric = path.computeMetrics().first;
-        final length = metric.length;
-        final tail = max(0.0, length - pathLength(arrow) - geometry.step * 3);
+      if (isError && !reducedMotion) {
+        final contact = blockerContact(arrow);
+        if (contact != null) {
+          final clearance = max(
+            0.0,
+            (geometry.point(contact) - head).distance - geometry.step * .8,
+          );
+          final motion = ArrowExitFrame.atDistance(
+            path,
+            head,
+            dir,
+            clearance * ArrowBlockedMotion.fraction(progress),
+          );
+          visible = motion.body;
+          head = motion.head;
+        }
+      }
+      if (exiting && !reducedMotion && progress > 0) {
+        final metric = visible.computeMetrics().first;
         final trail = metric.extractPath(
-          tail,
-          min(length, tail + geometry.step * 5),
+          0,
+          min(metric.length, geometry.step * 3),
         );
         canvas.drawPath(
           trail,
@@ -230,8 +256,7 @@ class ArrowPainter extends CustomPainter {
             ..style = PaintingStyle.stroke
             ..strokeCap = StrokeCap.round
             ..strokeWidth = geometry.step * .32
-            ..color = const Color(0xFF42DFFF)
-                .withValues(alpha: sin(progress * pi) * .45)
+            ..color = theme.light.withValues(alpha: sin(progress * pi) * .35)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
         );
       }
@@ -273,7 +298,15 @@ class ArrowPainter extends CustomPainter {
         visible,
         stroke
           ..shader = LinearGradient(
-            colors: [light, hint ? const Color(0xFFE0AE42) : theme.body, dark],
+            colors: [
+              light,
+              isError
+                  ? const Color(0xFFE63950)
+                  : hint
+                  ? const Color(0xFFE0AE42)
+                  : theme.body,
+              dark,
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ).createShader(visible.getBounds().inflate(width))
@@ -346,18 +379,20 @@ class ArrowPainter extends CustomPainter {
           ..close(),
         Paint()..color = const Color(0x50FFFFFF),
       );
+      if (exiting && reducedMotion) canvas.restore();
       canvas.restore();
       if (isError && !reducedMotion) {
         final contact = blockerContact(arrow);
-        if (contact != null) {
+        if (contact != null && progress >= .42) {
+          final impact = ((progress - .42) / .58).clamp(0.0, 1.0);
           canvas.drawCircle(
             geometry.point(contact),
-            geometry.step * (.3 + progress * .65),
+            geometry.step * (.3 + impact * .65),
             Paint()
               ..style = PaintingStyle.stroke
               ..strokeWidth = 2
               ..color = const Color(0xFFF34F6C)
-                  .withValues(alpha: sin(progress * pi) * .85),
+                  .withValues(alpha: sin(impact * pi) * .85),
           );
         }
       }
@@ -410,6 +445,65 @@ class ArrowPainter extends CustomPainter {
   bool shouldRepaint(covariant ArrowPainter oldDelegate) => true;
   @override
   bool shouldRebuildSemantics(covariant ArrowPainter oldDelegate) => true;
+}
+
+/// The tail follows the original bends while the head travels along its exit
+/// ray. Travel ends just beyond the board, so most of the animation is visible.
+class ArrowExitFrame {
+  const ArrowExitFrame(this.body, this.head, this.travel);
+  final Path body;
+  final Offset head;
+  final double travel;
+  static Duration duration(ArrowPath arrow) => Duration(
+    milliseconds: (560 + (arrow.cells.length - 1) * 8).clamp(560, 850),
+  );
+  static ArrowExitFrame sample(
+    Path original,
+    Offset head,
+    Offset direction,
+    Size board,
+    double step,
+    double progress,
+  ) {
+    final length = original.computeMetrics().first.length;
+    final toEdge = direction.dx > 0
+        ? board.width - head.dx
+        : direction.dx < 0
+        ? head.dx
+        : direction.dy > 0
+        ? board.height - head.dy
+        : head.dy;
+    final travel =
+        Curves.easeInOutSine.transform(progress.clamp(0.0, 1.0)) *
+        (length + max(0.0, toEdge) + step);
+    return atDistance(original, head, direction, travel);
+  }
+
+  static ArrowExitFrame atDistance(
+    Path original,
+    Offset head,
+    Offset direction,
+    double travel,
+  ) {
+    final length = original.computeMetrics().first.length;
+    final end = head + direction * travel;
+    final extended = Path.from(original)..lineTo(end.dx, end.dy);
+    final body = extended.computeMetrics().first.extractPath(
+      travel,
+      travel + length,
+    );
+    return ArrowExitFrame(body, end, travel);
+  }
+}
+
+/// Advance to the blocker, pause briefly at contact, then retrace the path.
+class ArrowBlockedMotion {
+  static double fraction(double progress) {
+    final p = progress.clamp(0.0, 1.0);
+    if (p < .42) return Curves.easeInOutSine.transform(p / .42);
+    if (p < .5) return 1;
+    return 1 - Curves.easeInOutCubic.transform((p - .5) / .5);
+  }
 }
 
 /// A finite three-tap demonstration; never sends taps or consumes a heart.

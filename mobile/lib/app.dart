@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'core/reminders.dart';
+import 'core/update_reminder.dart';
 import 'game/daily.dart';
 import 'theme_shop_screen.dart';
 import 'core/ads.dart';
@@ -69,9 +70,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final store = ProgressStore();
+  final updateReminder = UpdateReminder();
   late final Future<PackageInfo> packageInfo = PackageInfo.fromPlatform();
   PlayerProgress progress = PlayerProgress();
   bool loading = true;
+  bool persistenceReady = false;
   bool openingLevel = false;
   bool changingReminders = false;
   String? storageWarning;
@@ -90,11 +93,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _load() async {
     try {
       progress = await store.read();
+      persistenceReady = true;
     } catch (_) {
-      storageWarning =
-          'Device storage is unavailable. Progress lasts for this session.';
+      storageWarning = 'Saved progress could not be loaded. Restart the app to retry. Your existing save is preserved; this session will not be saved.';
     }
-    if (mounted) setState(() => loading = false);
+    if (!mounted) return;
+    setState(() => loading = false);
     MusicService.instance.setEnabled(progress.music);
     unawaited(
       DailyReminders.instance.sync(
@@ -103,6 +107,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
     save();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(updateReminder.check(context, ready: () =>
+          mounted && !loading && !openingLevel && storageWarning == null));
+    });
   }
 
   @override
@@ -186,11 +195,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void save() {
-    if (widget.initialProgress != null) return;
+    if (widget.initialProgress != null || !persistenceReady) return;
     MusicService.instance.setEnabled(progress.music);
-    final snapshot = PlayerProgress.fromJson(progress.toJson());
+    // ProgressStore captures immutable JSON synchronously before its first await.
+    // Avoid rebuilding the entire growing room/gallery history on every tap.
     unawaited(
-      store.save(snapshot).catchError((Object error) {
+      store.save(progress).catchError((Object error) {
         if (mounted) {
           setState(
             () => storageWarning =

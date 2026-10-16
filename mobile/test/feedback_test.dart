@@ -31,4 +31,18 @@ void main() {
     ]);
     feedback.dispose();
   });
+  test('native haptic failure does not escape the gameplay action', () async {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (_) async {
+      throw PlatformException(code: 'unavailable');
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    final feedback = FeedbackService();
+    await feedback.play('clear', sound: false, haptics: true);
+    await Future<void>.delayed(Duration.zero);
+    feedback.dispose();
+  });
 }

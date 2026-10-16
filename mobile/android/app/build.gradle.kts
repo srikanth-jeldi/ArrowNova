@@ -15,6 +15,10 @@ val releaseDefines = (project.findProperty("dart-defines") as? String).orEmpty()
     .split(",").filter { it.isNotBlank() }
     .map { String(Base64.getDecoder().decode(it), Charsets.UTF_8) }
 val storeRelease = releaseDefines.contains("STORE_RELEASE=true")
+val deviceAudit = releaseDefines.contains("DEVICE_AUDIT=true")
+if (deviceAudit && (storeRelease || releaseDefines.contains("LIVE_ADS=true"))) {
+    throw GradleException("Device audit builds must use test ads and debug signing.")
+}
 if (storeRelease && !releasePropertiesFile.exists()) {
     throw GradleException("Store releases require android/key.properties and the upload keystore.")
 }
@@ -23,6 +27,14 @@ android {
     namespace = "com.epitomehub.arrownova"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+
+    packaging {
+        jniLibs {
+            // Compress sideload APKs for sharing. Store builds retain direct native
+            // loading, avoiding an extra extracted copy on the user's device.
+            useLegacyPackaging = !storeRelease
+        }
+    }
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
@@ -37,7 +49,8 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.epitomehub.arrownova"
+        applicationId = if (deviceAudit) "com.epitomehub.arrownova.audit" else "com.epitomehub.arrownova"
+        manifestPlaceholders["appLabel"] = if (deviceAudit) "ArrowNova QA" else "ArrowNova"
         manifestPlaceholders["admobAppId"] = if (liveAds)
             "ca-app-pub-9061518700917881~3462287102"
         else "ca-app-pub-3940256099942544~3347511713"
@@ -86,4 +99,7 @@ flutter {
     source = "../.."
 }
 
-dependencies { coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4") }
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    implementation("com.google.android.play:app-update:2.1.0")
+}

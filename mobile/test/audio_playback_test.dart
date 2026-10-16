@@ -7,7 +7,7 @@ import 'package:arrownova/core/feedback_service.dart';
 class FakeOutput implements FeedbackOutput {
   final events = <String>[];
   Completer<void>? pending;
-  bool failNext = false;
+  bool failNext = false, failCleanup = false;
   @override
   Future<void> play(String asset, double volume) async {
     events.add('$asset@$volume');
@@ -21,11 +21,13 @@ class FakeOutput implements FeedbackOutput {
   @override
   Future<void> stop() async {
     events.add('stop');
+    if (failCleanup) throw StateError('stop failed');
   }
 
   @override
   Future<void> dispose() async {
     events.add('dispose');
+    if (failCleanup) throw StateError('dispose failed');
   }
 }
 
@@ -143,5 +145,23 @@ void main() {
       expect(File('assets/audio/$name.mp3').lengthSync(), greaterThan(1000));
       expect(File('assets/audio/$name.wav').existsSync(), false);
     }
+  });
+  test('one broken audio output cannot skip other output cleanup', () async {
+    final effects = FakeOutput()..failCleanup = true;
+    final victory = FakeOutput(), warnings = FakeOutput();
+    final service = FeedbackService(
+      effects: effects,
+      victory: victory,
+      warnings: warnings,
+      onCelebration: (_) {},
+    );
+    await service.stop();
+    expect(victory.events, ['stop']);
+    expect(warnings.events, ['stop']);
+    service.dispose();
+    service.dispose();
+    await Future<void>.delayed(Duration.zero);
+    expect(victory.events.where((e) => e == 'dispose'), hasLength(1));
+    expect(warnings.events.where((e) => e == 'dispose'), hasLength(1));
   });
 }

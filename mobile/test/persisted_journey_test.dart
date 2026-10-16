@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:arrownova/app.dart';
 import 'package:arrownova/core/progress_store.dart';
+import 'package:arrownova/core/update_reminder.dart';
 import 'package:arrownova/game/board.dart';
 import 'package:arrownova/victory_screen.dart';
 
@@ -13,6 +14,14 @@ void main() {
   testWidgets(
     'real home save path completes level nine and survives reopening',
     (tester) async {
+      // This save/reopen test has no Android Play service. Resolve its new
+      // background update query explicitly instead of leaving a platform call pending.
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        UpdateReminder.channel,
+        (_) async => null,
+      );
+      addTearDown(() => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(UpdateReminder.channel, null));
       PackageInfo.setMockInitialValues(
         appName: 'ArrowNova',
         packageName: 'com.epitomehub.arrownova',

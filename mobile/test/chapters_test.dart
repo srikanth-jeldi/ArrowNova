@@ -17,7 +17,6 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
     for (final font in {
-      'ArrowNovaSerif': 'assets/fonts/CormorantGaramond.ttf',
       'ArrowNovaSans': 'assets/fonts/Roboto-Regular.ttf',
       'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
     }.entries) {

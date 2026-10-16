@@ -249,13 +249,13 @@ class _GameScreenState extends State<GameScreen>
       blocked = result == TapResult.blocked;
     });
     sound(blocked ? (game.lost ? 'lost' : 'blocked') : 'clear');
-    animation.duration = Duration(
-      milliseconds: MediaQuery.disableAnimationsOf(context)
-          ? 80
-          : blocked
-          ? 440
-          : 300,
-    );
+    animation.duration = MediaQuery.disableAnimationsOf(context)
+        ? const Duration(milliseconds: 120)
+        : blocked
+        ? const Duration(milliseconds: 700)
+        : ArrowExitFrame.duration(
+            game.puzzle.arrows.firstWhere((a) => a.id == id),
+          );
     try {
       await animation
           .forward(from: 0)
@@ -273,12 +273,12 @@ class _GameScreenState extends State<GameScreen>
         active = null;
         transform.value = Matrix4.identity();
       });
-      animation.duration = const Duration(milliseconds: 650);
+      animation.duration = const Duration(seconds: 2);
       try {
         await animation
             .forward(from: 0)
             .orCancel
-            .timeout(const Duration(seconds: 2));
+            .timeout(const Duration(seconds: 3));
       } on TimeoutException {
         animation.stop();
       } on TickerCanceled {

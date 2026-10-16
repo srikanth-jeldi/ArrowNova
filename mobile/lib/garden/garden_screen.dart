@@ -4,7 +4,7 @@ import '../core/ads.dart';
 import '../core/progress_store.dart';
 import '../ui.dart';
 import 'garden_catalog.dart';
-import 'room_3d.dart';
+import 'home_decor_screen.dart';
 
 class GardenScreen extends StatefulWidget {
   const GardenScreen({
@@ -31,7 +31,7 @@ class _GardenScreenState extends State<GardenScreen> {
   void placeItem(GardenItem item, {bool buy = false}) {
     change(() {
       if (!buy || widget.progress.buy(item.id)) {
-        widget.progress.place(item.id, slot, home: home);
+        widget.progress.place(item.id, slot);
       }
     });
     if (scroll.hasClients) {
@@ -44,8 +44,7 @@ class _GardenScreenState extends State<GardenScreen> {
   }
 
   bool home = false;
-  Map<int, String> get placements =>
-      home ? widget.progress.homePlacements : widget.progress.placements;
+  Map<int, String> get placements => widget.progress.placements;
   int slot = 0;
   bool editing = false;
   bool adBusy = false;
@@ -89,7 +88,7 @@ class _GardenScreenState extends State<GardenScreen> {
   }
 
   bool visible(GardenItem item) =>
-      (home ? item.indoors : !item.homeOnly) &&
+      !item.homeOnly &&
       switch (category) {
         'All' => true,
         'Owned' => widget.progress.owned.contains(item.id),
@@ -101,6 +100,14 @@ class _GardenScreenState extends State<GardenScreen> {
   @override
   Widget build(BuildContext context) {
     final p = widget.progress;
+    if (home) {
+      return HomeDecorScreen(
+        progress: p,
+        onChanged: widget.onChanged,
+        showRewardAd: widget.showRewardAd,
+        onBack: () => setState(() => home = false),
+      );
+    }
     return PopScope(
       canPop: !adBusy,
       child: Scaffold(
@@ -117,7 +124,7 @@ class _GardenScreenState extends State<GardenScreen> {
                   style: const TextStyle(color: gold, fontSize: 27),
                 ),
                 Text(
-                  '${p.owned.length}/${gardenItems.length} decorations collected · ${placements.length}/$gardenSlotCount placed',
+                  '${gardenItems.where((i) => !i.homeOnly && p.owned.contains(i.id)).length}/${gardenItems.where((i) => !i.homeOnly).length} decorations collected · ${placements.length}/$gardenSlotCount placed',
                   style: const TextStyle(color: muted),
                 ),
                 const SizedBox(height: 14),
@@ -144,26 +151,15 @@ class _GardenScreenState extends State<GardenScreen> {
                         }),
                 ),
                 const SizedBox(height: 14),
-                if (home)
-                  Room3DScene(
-                    progress: p,
-                    editing: editing && !adBusy,
-                    selected: slot,
-                    onSelect: (value) => setState(() => slot = value),
-                    onMove: (index, x, y) =>
-                        setState(() => p.moveGarden(index, x, y, home: true)),
-                    onSave: widget.onChanged,
-                  )
-                else
-                  GardenScene(
-                    progress: p,
-                    editing: editing && !adBusy,
-                    selected: slot,
-                    onSelect: (value) => setState(() => slot = value),
-                    onMove: (index, x, y) =>
-                        setState(() => p.moveGarden(index, x, y, home: home)),
-                    onMoveEnd: widget.onChanged,
-                  ),
+                GardenScene(
+                  progress: p,
+                  editing: editing && !adBusy,
+                  selected: slot,
+                  onSelect: (value) => setState(() => slot = value),
+                  onMove: (index, x, y) =>
+                      setState(() => p.moveGarden(index, x, y)),
+                  onMoveEnd: widget.onChanged,
+                ),
                 const SizedBox(height: 14),
                 OutlinedButton.icon(
                   onPressed: adBusy
@@ -172,42 +168,17 @@ class _GardenScreenState extends State<GardenScreen> {
                   icon: Icon(
                     editing ? Icons.check_rounded : Icons.edit_outlined,
                   ),
-                  label: Text(
-                    editing
-                        ? 'Done decorating'
-                        : home
-                        ? 'Decorate room'
-                        : 'Decorate garden',
-                  ),
+                  label: Text(editing ? 'Done decorating' : 'Decorate garden'),
                 ),
                 if (!editing)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Text(
-                      'Create your own home and garden with flowers, curtains and furniture. Both layouts save separately; unlocked pieces work in either space.',
+                      'Decorate your garden with your permanent collection. Home Decor opens a separate room challenge with free starters and room-only premium items.',
                       style: TextStyle(color: muted, height: 1.5),
                     ),
                   ),
                 if (editing) ...[
-                  if (home) ...[
-                    const Text(
-                      'Swipe to rotate the room. Pinch to zoom. Choose Move items to drag furniture; wall decor stays on the back wall.',
-                      style: TextStyle(color: muted),
-                    ),
-                    Wrap(
-                      spacing: 6,
-                      children: [
-                        for (var i = 0; i < gardenSlotCount; i++)
-                          ChoiceChip(
-                            label: Text('${i + 1}'),
-                            selected: slot == i,
-                            onSelected: adBusy
-                                ? null
-                                : (_) => setState(() => slot = i),
-                          ),
-                      ],
-                    ),
-                  ],
                   Row(
                     children: [
                       Expanded(
@@ -239,14 +210,7 @@ class _GardenScreenState extends State<GardenScreen> {
                           'Flowers',
                           'Pots & jars',
                           'Furniture',
-                          if (!home) 'Landmarks',
-                          if (home) ...[
-                            'Curtains',
-                            'Rugs',
-                            'Lighting',
-                            'Wall art',
-                            'Beds',
-                          ],
+                          'Landmarks',
                           'Premium',
                           'Regular',
                         ])
@@ -299,9 +263,7 @@ class _GardenScreenState extends State<GardenScreen> {
                 SizedBox(
                   width: 82,
                   height: 86,
-                  child: home
-                      ? CustomPaint(painter: RoomItemPainter(item))
-                      : GardenDecoration(item.id),
+                  child: GardenDecoration(item.id),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -536,7 +498,7 @@ class GardenDecoration extends StatelessWidget {
       return Image.asset(asset, fit: BoxFit.contain, cacheWidth: 320);
     }
     if (gardenItems[index].homeOnly) {
-      return CustomPaint(painter: RoomItemPainter(gardenItems[index]));
+      return const SizedBox.shrink();
     }
     return AspectRatio(
       aspectRatio: 1,
