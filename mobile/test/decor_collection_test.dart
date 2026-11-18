@@ -108,7 +108,7 @@ void main() {
       expect(corrupt.adsFor(const DecorPiece(0, 1)), 3);
       expect(corrupt.placed, isEmpty);
       expect(corrupt.finished, false);
-      expect(decorPieces.map((i) => i.id).toSet().length, 28);
+      expect(decorPieces.map((i) => i.id).toSet().length, 84);
     },
   );
   testWidgets('large gallery builds only visible room scenes', (tester) async {
@@ -164,6 +164,9 @@ void main() {
         220,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.pumpAndSettle();
+      await Scrollable.ensureVisible(tester.element(action), alignment: .5);
+      await tester.pumpAndSettle();
       await tester.tap(action);
       await tester.pump();
       await tester.tap(action);

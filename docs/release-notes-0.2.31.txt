@@ -1,0 +1,4 @@
+<en-GB>
+• Save a décor item to your room wishlist and see how many coins and first-time level wins you need. Your wish updates as you earn coins.
+• Improved startup responsiveness, especially with larger saved games.
+</en-GB>

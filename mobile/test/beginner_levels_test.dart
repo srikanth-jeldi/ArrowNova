@@ -9,6 +9,17 @@ void main() {
       expect(p.arrows.length, LevelCatalog.arrowCount(n));
       expect(LevelCatalog.isHard(n), isFalse);
       final cells = <Cell>{};
+      for (final arrow in p.arrows) {
+        final directions = <String>{
+          for (var i = 1; i < arrow.cells.length; i++)
+            "${(arrow.cells[i] - arrow.cells[i - 1]).x},${(arrow.cells[i] - arrow.cells[i - 1]).y}",
+        };
+        expect(
+          directions.length,
+          greaterThanOrEqualTo(2),
+          reason: "level $n must teach bends",
+        );
+      }
       for (final a in p.arrows) {
         expect(
           a.cells.length,

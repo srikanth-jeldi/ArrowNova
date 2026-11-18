@@ -1,4 +1,4 @@
-// The catalogue uses original, photographed-style 2D sprites, not colour swaps.
+// Original sprite silhouettes and coordinated finish variants. Stable IDs preserve saves.
 const decorCategories = [
   'Sofas',
   'Pillows',
@@ -13,6 +13,14 @@ const decorCollections = [
   'Emerald elegance',
   'Rose atelier',
   'Coastal blue',
+  'Amber studio',
+  'Sage linen',
+  'Midnight velvet',
+  'Terracotta atelier',
+  'Lavender retreat',
+  'Silver coast',
+  'Cocoa lounge',
+  'Peach sanctuary',
 ];
 const decorRoomNames = [
   'Warm oak lounge',
@@ -45,32 +53,83 @@ class DecorPiece {
   final int categoryIndex, collection;
   String get id => 'decor_${categoryIndex}_$collection';
   String get category => decorCategories[categoryIndex];
-  bool get premium => collection != 0;
-  String get name => const [
-    ['Linen haven', 'Emerald velvet', 'Rose curved sofa', 'Coastal blue sofa'],
-    ['Woven ivory', 'Botanical silk', 'Blush boucle', 'Indigo woven pillow'],
-    [
-      'Natural weave',
-      'Heritage emerald',
-      'Rose medallion',
-      'Coastal woven rug',
-    ],
-    ['Airy linen', 'Velvet emerald', 'Soft blush drapes', 'Blue linen drapes'],
-    [
-      'Eucalyptus ceramic',
-      'Golden orchid',
-      'Peony porcelain',
-      'Blue hydrangea vase',
-    ],
-    ['Quiet landscape', 'Gilded botanicals', 'Rose gallery', 'Coastal horizon'],
-    [
-      'Oak tripod',
-      'Brass arc lamp',
-      'Sculpted marble lamp',
-      'Blue ceramic lamp',
-    ],
-  ][categoryIndex][collection];
-  String get atlas => 'assets/art/decor/collection_$collection.webp';
+  bool get coinItem => collection >= 4;
+  int get price =>
+      const [400, 120, 200, 240, 160, 160, 250][categoryIndex] +
+      (collection > 4 ? (collection - 4) * 20 : 0);
+  int get sourceCollection => collection < 4
+      ? collection
+      : const [3, 0, 1, 2, 2, 3, 1, 0][collection - 4];
+  int? get tint => collection < 4
+      ? null
+      : const [
+          0xffffd198,
+          0xffc9dfbe,
+          0xff8494b0,
+          0xffe0a080,
+          0xffc5aedf,
+          0xffcbd5df,
+          0xffb69b80,
+          0xffffd4b8,
+        ][collection - 4];
+  bool get premium => collection > 0 && !coinItem;
+  String get name => collection > 4
+      ? '${decorCollections[collection]} ${const ["sofa", "cushion", "rug", "drapes", "vase", "artwork", "lamp"][categoryIndex]}'
+      : coinItem
+      ? const [
+          'Honey velvet sofa',
+          'Amber cushion',
+          'Saffron rug',
+          'Ochre drapes',
+          'Honey glass vase',
+          'Amber gallery',
+          'Honey glow lamp',
+        ][categoryIndex]
+      : const [
+          [
+            'Linen haven',
+            'Emerald velvet',
+            'Rose curved sofa',
+            'Coastal blue sofa',
+          ],
+          [
+            'Woven ivory',
+            'Botanical silk',
+            'Blush boucle',
+            'Indigo woven pillow',
+          ],
+          [
+            'Natural weave',
+            'Heritage emerald',
+            'Rose medallion',
+            'Coastal woven rug',
+          ],
+          [
+            'Airy linen',
+            'Velvet emerald',
+            'Soft blush drapes',
+            'Blue linen drapes',
+          ],
+          [
+            'Eucalyptus ceramic',
+            'Golden orchid',
+            'Peony porcelain',
+            'Blue hydrangea vase',
+          ],
+          [
+            'Quiet landscape',
+            'Gilded botanicals',
+            'Rose gallery',
+            'Coastal horizon',
+          ],
+          [
+            'Oak tripod',
+            'Brass arc lamp',
+            'Sculpted marble lamp',
+            'Blue ceramic lamp',
+          ],
+        ][categoryIndex][collection];
+  String get atlas => 'assets/art/decor/collection_$sourceCollection.webp';
 }
 
 final decorPieces = [
@@ -92,12 +151,20 @@ class DecorRoom {
     this.finished = false,
   }) : placed = placed ?? {},
        credits = credits ?? {};
+  final Set<String> bought = {};
+  String? wish;
+  void toggleWish(DecorPiece item) {
+    if (finished || !item.coinItem || owns(item)) return;
+    wish = wish == item.id ? null : item.id;
+  }
+
   final Map<String, String> placed;
   final Map<String, int> credits;
   bool finished;
   int adsFor(DecorPiece item) => credits[item.id] ?? 0;
-  bool owns(DecorPiece item) =>
-      !item.premium || adsFor(item) >= decorAdsRequired;
+  bool owns(DecorPiece item) => item.coinItem
+      ? bought.contains(item.id)
+      : !item.premium || adsFor(item) >= decorAdsRequired;
   bool get complete => decorCategories.every(placed.containsKey);
   bool place(DecorPiece item) {
     if (finished || !owns(item)) return false;
@@ -117,6 +184,8 @@ class DecorRoom {
   }
 
   Map<String, Object> toJson() => {
+    'bought': bought.toList(),
+    'wish': wish ?? '',
     'placed': placed,
     'credits': credits,
     'finished': finished,
@@ -124,6 +193,17 @@ class DecorRoom {
   factory DecorRoom.fromJson(Object? raw) {
     final data = raw is Map ? raw : const {};
     final room = DecorRoom();
+    if (data['bought'] is List) {
+      room.bought.addAll(
+        (data['bought'] as List).whereType<String>().where(
+          (id) => decorPiece(id)?.coinItem == true,
+        ),
+      );
+    }
+    final desired = decorPiece('${data['wish']}');
+    if (desired != null && desired.coinItem && !room.owns(desired)) {
+      room.wish = desired.id;
+    }
     final creditData = data['credits'];
     if (creditData is Map) {
       for (final e in creditData.entries) {

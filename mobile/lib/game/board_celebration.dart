@@ -54,17 +54,10 @@ class _BoardWinCelebrationState extends State<BoardWinCelebration> {
                             Curves.easeOutBack.transform(
                               (t / .35).clamp(0.0, 1.0),
                             ),
-              child: Container(
+              child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 22,
                   vertical: 16,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xF2FFFFFF),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x18051B3D), blurRadius: 18),
-                  ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

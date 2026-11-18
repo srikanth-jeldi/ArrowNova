@@ -4,6 +4,8 @@ import '../game/chapters.dart';
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../game/puzzle.dart';
@@ -21,6 +23,10 @@ class PlayerProgress {
     this.music = true,
     Map<String, int>? dailyStars,
     this.dailyReminders = false,
+    this.reminderLimit = 1,
+    this.shopSpent = 0,
+    this.shieldBought,
+    Set<String>? protectedDays,
     Set<String>? owned,
     Map<int, String>? placements,
     Map<int, GardenPosition>? gardenPositions,
@@ -37,9 +43,11 @@ class PlayerProgress {
     Set<String>? themes,
     this.selectedTheme = 'crystal',
     this.endlessCompleted = 0,
+    this.rescueCompleted = 0,
     ReviewProgress? review,
     HomeDecorProgress? homeDecor,
-  }) : completed = completed ?? {},
+  }) : protectedDays = protectedDays ?? {},
+       completed = completed ?? {},
        chapters = {
          1,
          ...(chapters ??
@@ -70,6 +78,15 @@ class PlayerProgress {
   final Set<String> themes;
   String selectedTheme;
   int endlessCompleted;
+  int rescueCompleted;
+  int get nextRescueRound => rescueCompleted + 1;
+  bool completeRescue(int round) {
+    if (round != nextRescueRound || round > RescueCatalog.count) return false;
+    rescueCompleted = round;
+    recordAdCompletion();
+    return true;
+  }
+
   int get nextEndlessRound => endlessCompleted + 1;
   bool completeEndless(int round) {
     if (round != nextEndlessRound) return false;
@@ -90,7 +107,9 @@ class PlayerProgress {
 
   int nextStreakBonus(DateTime date) {
     final yesterday = DateTime(date.year, date.month, date.day - 1);
-    final previous = dailyStars.containsKey(dayKey(yesterday))
+    final previous =
+        (dailyStars.containsKey(dayKey(yesterday)) ||
+            protectedDays.contains(dayKey(yesterday)))
         ? dailyStreak(yesterday)
         : 0;
     return const [20, 30, 40, 50, 60, 80, 100][previous % 7];
@@ -158,7 +177,52 @@ class PlayerProgress {
 
   final Map<String, int> dailyStars;
   bool dailyReminders;
+  int reminderLimit, shopSpent;
+  String? shieldBought;
+  final Set<String> protectedDays;
+  bool buyDecor(DecorPiece item) {
+    final room = homeDecor.current;
+    if (!item.coinItem ||
+        room.finished ||
+        room.owns(item) ||
+        coins < item.price) {
+      return false;
+    }
+    room.bought.add(item.id);
+    if (room.wish == item.id) room.wish = null;
+    shopSpent += item.price;
+    return true;
+  }
+
+  bool buyShield(DateTime today) {
+    if (shieldBought != null || coins < 200) return false;
+    shieldBought = dayKey(today);
+    shopSpent += 200;
+    return true;
+  }
+
+  bool applyShield(DateTime today) {
+    final bought = shieldBought;
+    if (bought == null || dailyStars.isEmpty) return false;
+    final dates =
+        dailyStars.keys.where((k) => k.compareTo(dayKey(today)) < 0).toList()
+          ..sort();
+    if (dates.isEmpty) return false;
+    final last = DateTime.tryParse(dates.last);
+    if (last == null) return false;
+    final missed = dayKey(DateTime(last.year, last.month, last.day + 1));
+    if (missed.compareTo(bought) < 0 ||
+        missed.compareTo(dayKey(today)) >= 0 ||
+        protectedDays.contains(missed)) {
+      return false;
+    }
+    protectedDays.add(missed);
+    shieldBought = null;
+    return true;
+  }
+
   bool completeDaily(DateTime date, int stars) {
+    applyShield(date);
     final key = dayKey(date);
     final first = !dailyStars.containsKey(key);
     if (first) streakRewards[key] = nextStreakBonus(date);
@@ -172,8 +236,9 @@ class PlayerProgress {
       date = DateTime(date.year, date.month, date.day - 1);
     }
     var streak = 0;
-    while (dailyStars.containsKey(dayKey(date))) {
-      streak++;
+    while (dailyStars.containsKey(dayKey(date)) ||
+        protectedDays.contains(dayKey(date))) {
+      if (dailyStars.containsKey(dayKey(date))) streak++;
       date = DateTime(date.year, date.month, date.day - 1);
     }
     return streak;
@@ -227,21 +292,33 @@ class PlayerProgress {
     return true;
   }
 
+  static const coinsPerFirstWin = 40;
+  ({int missing, int levels}) wishCost(DecorPiece item) {
+    final deficit = (item.price - coins).clamp(0, item.price);
+    return (
+      missing: deficit,
+      levels: (deficit + coinsPerFirstWin - 1) ~/ coinsPerFirstWin,
+    );
+  }
+
   int get coins =>
       (completed.length +
               dailyStars.length +
               chestStars.length +
-              endlessCompleted) *
-          40 +
+              endlessCompleted +
+              rescueCompleted) *
+          coinsPerFirstWin +
       streakRewards.values.fold<int>(0, (sum, value) => sum + value) -
       boardThemes
           .where((theme) => themes.contains(theme.id))
-          .fold<int>(0, (sum, theme) => sum + theme.cost);
+          .fold<int>(0, (sum, theme) => sum + theme.cost) -
+      shopSpent;
   int get gardenPoints =>
       (completed.length +
               dailyStars.length +
               chestStars.length +
-              endlessCompleted) *
+              endlessCompleted +
+              rescueCompleted) *
           10 -
       gardenItems
           .where((i) => owned.contains(i.id))
@@ -298,6 +375,7 @@ class PlayerProgress {
     'homeDecor2D': homeDecor.toJson(),
     'runs': runs,
     'endlessCompleted': endlessCompleted,
+    'rescueCompleted': rescueCompleted,
     'streakRewards': streakRewards,
     'themes': themes.toList(),
     'selectedTheme': selectedTheme,
@@ -310,6 +388,10 @@ class PlayerProgress {
     'music': music,
     'dailyStars': dailyStars,
     'dailyReminders': dailyReminders,
+    'reminderLimit': reminderLimit,
+    'shopSpent': shopSpent,
+    'shieldBought': shieldBought ?? '',
+    'protectedDays': protectedDays.toList(),
     'trainingCompleted': trainingCompleted,
     'levelsSinceAdBreak': levelsSinceAdBreak,
     'sound': sound,
@@ -374,6 +456,12 @@ class PlayerProgress {
         data['endlessCompleted'] is int && data['endlessCompleted'] >= 0
         ? data['endlessCompleted']
         : 0,
+    rescueCompleted:
+        data['rescueCompleted'] is int &&
+            data['rescueCompleted'] >= 0 &&
+            data['rescueCompleted'] <= RescueCatalog.count
+        ? data['rescueCompleted']
+        : 0,
     review: ReviewProgress.fromJson(data['review']),
     runs: {
       for (final entry
@@ -425,6 +513,20 @@ class PlayerProgress {
         .where((n) => n >= 1)
         .toSet(),
     dailyReminders: data['dailyReminders'] == true,
+    reminderLimit: const {1, 2, 4}.contains(data['reminderLimit'])
+        ? data['reminderLimit'] as int
+        : 1,
+    shopSpent: data['shopSpent'] is int && (data['shopSpent'] as int) > 0
+        ? data['shopSpent'] as int
+        : 0,
+    shieldBought:
+        data['shieldBought'] is String &&
+            DateTime.tryParse(data['shieldBought'] as String) != null
+        ? data['shieldBought'] as String
+        : null,
+    protectedDays: data['protectedDays'] is List
+        ? (data['protectedDays'] as List).whereType<String>().toSet()
+        : {},
     dailyStars: {
       for (final entry
           in (data['dailyStars'] is Map ? data['dailyStars'] as Map : {})
@@ -492,6 +594,9 @@ class PlayerProgress {
 
 /// Uses the same secure-storage approach as ChessVerse AuthSessionStore,
 /// with an ArrowNova-only namespace and no production account connections.
+PlayerProgress decodeSavedProgress(String raw) =>
+    PlayerProgress.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+
 class ProgressStore {
   ProgressStore({
     Future<void> Function(String)? write,
@@ -510,7 +615,13 @@ class ProgressStore {
       final value = await _read().timeout(const Duration(seconds: 8));
       final progress = value == null
           ? PlayerProgress()
-          : PlayerProgress.fromJson(jsonDecode(value) as Map<String, dynamic>);
+          : value.length < 32 * 1024
+          ? decodeSavedProgress(value)
+          : await compute(
+              decodeSavedProgress,
+              value,
+              debugLabel: 'ArrowNova load save',
+            );
       _readFailed = false;
       return progress;
     } catch (_) {

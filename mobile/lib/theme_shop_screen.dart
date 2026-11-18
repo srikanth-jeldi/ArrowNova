@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/progress_store.dart';
+import 'garden/home_decor_screen.dart';
 import 'game/board.dart';
 import 'game/board_themes.dart';
 import 'game/puzzle.dart';
@@ -72,6 +73,48 @@ class _ThemeShopScreenState extends State<ThemeShopScreen> {
         const Text(
           'Daily challenge streak bonus: 20 · 30 · 40 · 50 · 60 · 80 · 100 coins. The cycle repeats every 7 days; a missed day starts a new streak.',
           style: TextStyle(color: ice),
+        ),
+        ListTile(
+          leading: const Icon(Icons.chair_outlined),
+          title: const Text('Coin décor shop'),
+          subtitle: const Text(
+            'Browse Amber studio pieces for your current room.',
+          ),
+          onTap: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (ctx) => HomeDecorScreen(
+                  progress: widget.progress,
+                  onChanged: widget.onChanged,
+                  onBack: () => Navigator.pop(ctx),
+                ),
+              ),
+            );
+            if (mounted) setState(() {});
+          },
+        ),
+        Card(
+          child: ListTile(
+            title: const Text('Streak Shield'),
+            subtitle: const Text(
+              'Protect one missed Daily without earning its coins or stars. Hold one at a time.',
+            ),
+            trailing: TextButton(
+              onPressed:
+                  widget.progress.shieldBought != null ||
+                      widget.progress.coins < 200
+                  ? null
+                  : () {
+                      if (widget.progress.buyShield(DateTime.now())) {
+                        setState(() {});
+                        widget.onChanged();
+                      }
+                    },
+              child: Text(
+                widget.progress.shieldBought != null ? 'Owned' : 'Buy · 200',
+              ),
+            ),
+          ),
         ),
         for (final theme in boardThemes)
           Padding(

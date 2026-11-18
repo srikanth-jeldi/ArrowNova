@@ -25,6 +25,7 @@ void main() {
     messenger.setMockMethodCallHandler(notifications, (call) async {
       calls.add(call);
       if (call.method == 'requestNotificationsPermission') return permission;
+      if (call.method == 'pendingNotificationRequests') return [];
       if (call.method == 'initialize') return true;
       return null;
     });
@@ -42,7 +43,35 @@ void main() {
         .setMockMethodCallHandler(timezone, (_) async => 'Asia/Calcutta');
     expect(await DailyReminders().enable({}), isTrue);
     expect(tz.local.name, 'Asia/Calcutta');
-    expect(calls.where((c) => c.method == 'zonedSchedule').length, 2);
+    expect(calls.where((c) => c.method == 'zonedSchedule').length, 7);
+  });
+
+  test('four-slot alarms respect local dates and switching off removes them', () async {
+    final pending=<int,Map>{};
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(notifications,(call) async {
+      if(call.method=='initialize') return true;
+      if(call.method=='pendingNotificationRequests') return [for(final id in pending.keys){'id':id,'title':'ArrowNova'}];
+      if(call.method=='zonedSchedule') {final a=call.arguments as Map;pending[a['id'] as int]=Map.of(a);}
+      if(call.method=='cancel') pending.remove((call.arguments as Map)['id']);
+      return null;
+    });
+    final reminders=DailyReminders();
+    await reminders.initialize();
+    final now=tz.TZDateTime.now(tz.local);
+    expect(await reminders.sync(true,{dayKey(now)},limit:4,unfinished:true,streak:3),true);
+    final counts=<String,int>{};
+    for(final a in pending.values) {
+      expect(a.containsKey('matchDateTimeComponents'),false);
+      final d=DateTime.parse(a['scheduledDateTime']);
+      final k=dayKey(d);
+      counts[k]=(counts[k]??0)+1;
+      if(d.hour==9 || d.hour==20) expect(k,isNot(dayKey(now)));
+    }
+    expect(pending.length,22);expect(counts.values.every((v)=>v<=4),true);
+    expect(await reminders.sync(true,{},limit:1),true);
+    expect(pending.length,7);
+    expect(await reminders.sync(false,{}),true);
+    expect(pending,isEmpty);
   });
 
   test('permission denial does not schedule notifications', () async {
@@ -51,39 +80,23 @@ void main() {
     expect(calls.where((c) => c.method == 'zonedSchedule'), isEmpty);
   });
 
-  test(
-    'daily completion skips today; inactivity reminder is once after 24h',
-    () async {
-      final reminders = DailyReminders();
-      await reminders.initialize();
-      final now = tz.TZDateTime.now(tz.local);
-      expect(await reminders.enable({dayKey(now)}), isTrue);
-      final scheduled = calls
-          .where((c) => c.method == 'zonedSchedule')
-          .map((c) => c.arguments as Map)
-          .toList();
-      expect(scheduled.length, 2);
-      final daily = scheduled.singleWhere((c) => c['id'] == 9100);
-      final nextDay = DateTime(now.year, now.month, now.day + 1, 9);
-      expect(DateTime.parse(daily['scheduledDateTime']), nextDay);
-      expect(daily.containsKey('matchDateTimeComponents'), isTrue);
-      final away = scheduled.singleWhere((c) => c['id'] == 9103);
-      expect(away.containsKey('matchDateTimeComponents'), isFalse);
-      final hours = DateTime.parse(away['scheduledDateTime'])
-          .difference(
-            DateTime(
-              now.year,
-              now.month,
-              now.day,
-              now.hour,
-              now.minute,
-              now.second,
-            ),
-          )
-          .inSeconds;
-      expect(hours, inInclusiveRange(86400, 86405));
-    },
-  );
+  test('daily completion skips today with the one-per-day limit', () async {
+    final reminders = DailyReminders();
+    await reminders.initialize();
+    final now = tz.TZDateTime.now(tz.local);
+    expect(await reminders.enable({dayKey(now)}), isTrue);
+    final scheduled = calls
+        .where((c) => c.method == 'zonedSchedule')
+        .map((c) => c.arguments as Map)
+        .toList();
+    expect(scheduled.length, 7);
+    final daily = scheduled.first;
+    expect(
+      DateTime.parse(daily['scheduledDateTime']),
+      DateTime(now.year, now.month, now.day + 1, 9),
+    );
+    expect(daily.containsKey('matchDateTimeComponents'), false);
+  });
 
   test('later disable cancels all slots after an overlapping enable', () async {
     final reminders = DailyReminders();

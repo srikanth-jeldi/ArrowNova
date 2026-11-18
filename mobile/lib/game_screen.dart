@@ -24,6 +24,7 @@ class GameScreen extends StatefulWidget {
     required this.level,
     this.startTraining = false,
     this.endless = false,
+    this.rescue = false,
     this.showHintAd,
     this.showBreakAd,
     this.reviewService,
@@ -36,6 +37,7 @@ class GameScreen extends StatefulWidget {
   final int level;
   final bool startTraining;
   final bool endless;
+  final bool rescue;
   final DateTime? dailyDate;
   final int? chestIndex;
   final Future<HintAdResult> Function()? showHintAd;
@@ -70,7 +72,9 @@ class _GameScreenState extends State<GameScreen>
   BoardTheme get activeTheme => learning
       ? boardThemes.first
       : levelBoardTheme(widget.progress.selectedTheme, game.puzzle.level);
-  String get runKey => widget.endless
+  String get runKey => widget.rescue
+      ? 'rescue/${game.puzzle.level}'
+      : widget.endless
       ? 'endless/${game.puzzle.level}'
       : widget.dailyDate == null
       ? 'classic/${game.puzzle.level}'
@@ -101,7 +105,9 @@ class _GameScreenState extends State<GameScreen>
     if (learning || !game.won || completionCommitted) return;
     completionCommitted = true;
     playTime.stop();
-    firstCompletion = widget.endless
+    firstCompletion = widget.rescue
+        ? game.puzzle.level == widget.progress.nextRescueRound
+        : widget.endless
         ? game.puzzle.level == widget.progress.nextEndlessRound
         : widget.chestIndex != null
         ? !widget.progress.chestStars.containsKey(
@@ -163,6 +169,8 @@ class _GameScreenState extends State<GameScreen>
     game = GameSession(
       learning
           ? TrainingCatalog.get(1)
+          : widget.rescue
+          ? RescueCatalog.get(widget.level)
           : widget.endless
           ? EndlessCatalog.get(widget.level)
           : widget.dailyDate != null
@@ -370,6 +378,7 @@ class _GameScreenState extends State<GameScreen>
       if (!mounted) return;
       if (!learning &&
           !widget.endless &&
+          !widget.rescue &&
           !await ensureChapter(
             context,
             widget.progress,
@@ -410,6 +419,8 @@ class _GameScreenState extends State<GameScreen>
           ),
         );
       }
+    } else if (widget.rescue) {
+      game = GameSession(RescueCatalog.get(game.puzzle.level + 1));
     } else if (widget.endless) {
       game = GameSession(EndlessCatalog.get(game.puzzle.level + 1));
     } else {
@@ -537,7 +548,9 @@ class _GameScreenState extends State<GameScreen>
       builder: (dialog) => AlertDialog(
         title: const Text('Skip this level?'),
         content: Text(
-          'Complete a rewarded ad to unlock the next Classic level. This level stays available to replay. Skipping gives no stars, coins or garden points.${game.puzzle.level % ChapterCatalog.size == 0 ? ' This ad also unlocks the next chapter.' : ''}',
+          widget.rescue
+              ? 'Complete a rewarded ad to rescue this animal and move to the next mission. Skipping gives no stars or coins.'
+              : 'Complete a rewarded ad to unlock the next Classic level. This level stays available to replay. Skipping gives no stars, coins or garden points.${game.puzzle.level % ChapterCatalog.size == 0 ? ' This ad also unlocks the next chapter.' : ''}',
         ),
         actions: [
           TextButton(
@@ -565,8 +578,12 @@ class _GameScreenState extends State<GameScreen>
     if (result == HintAdResult.earned) {
       widget.progress.runs.remove(runKey);
       widget.progress.review.resetStreak();
-      widget.progress.skip(game.puzzle.level);
-      if (game.puzzle.level % ChapterCatalog.size == 0) {
+      if (widget.rescue) {
+        widget.progress.completeRescue(game.puzzle.level);
+      } else {
+        widget.progress.skip(game.puzzle.level);
+      }
+      if (!widget.rescue && game.puzzle.level % ChapterCatalog.size == 0) {
         widget.progress.unlockChapter(ChapterCatalog.of(game.puzzle.level + 1));
         widget.progress.levelsSinceAdBreak = 0;
       }
@@ -623,9 +640,16 @@ class _GameScreenState extends State<GameScreen>
     if (game.won && !busy && !learning) {
       return VictoryScreen(
         endless: widget.endless,
+        rescueMode: widget.rescue,
+        rescueAnimal: widget.rescue
+            ? RescueCatalog.animal(game.puzzle.level)
+            : null,
+        rescueFinishedAll:
+            widget.rescue && game.puzzle.level == RescueCatalog.count,
         waitingForAd: adBreakPending,
         allowReplay:
             !widget.endless &&
+            (!widget.rescue || game.puzzle.level == RescueCatalog.count) &&
             (widget.dailyDate == null || widget.chestIndex != null),
         level: game.puzzle.level,
         stars: (3 - game.mistakes + practiceMistakes).clamp(1, 3),
@@ -642,7 +666,9 @@ class _GameScreenState extends State<GameScreen>
         dailyLabel: widget.dailyDate != null
             ? '${dayKey(widget.dailyDate!)}${widget.chestIndex != null ? ' · CHEST ${widget.chestIndex! + 1}' : ''}'
             : null,
-        onNext: widget.endless || widget.dailyDate == null
+        onNext: widget.rescue && game.puzzle.level == RescueCatalog.count
+            ? () => Navigator.pop(context)
+            : widget.endless || widget.rescue || widget.dailyDate == null
             ? next
             : () => Navigator.pop(context),
         onReplay: restart,
@@ -695,9 +721,11 @@ class _GameScreenState extends State<GameScreen>
                                               Color(0xFF00AEF4),
                                             ],
                                           ).createShader(bounds),
-                                      child: const Text(
-                                        'ArrowNova',
-                                        style: TextStyle(
+                                      child: Text(
+                                        widget.rescue
+                                            ? 'ANIMAL RESCUE'
+                                            : 'ArrowNova',
+                                        style: const TextStyle(
                                           fontSize: 28,
                                           fontWeight: FontWeight.w700,
                                           color: Colors.white,
@@ -708,6 +736,8 @@ class _GameScreenState extends State<GameScreen>
                                     Text(
                                       learning
                                           ? 'PRACTICE $trainingRound / 2'
+                                          : widget.rescue
+                                          ? 'MISSION ${game.puzzle.level} / ${RescueCatalog.count}'
                                           : widget.endless
                                           ? 'ROUND ${game.puzzle.level} · ENDLESS'
                                           : widget.dailyDate != null
@@ -825,7 +855,7 @@ class _GameScreenState extends State<GameScreen>
                                   ),
                                   const SizedBox(height: 9),
                                   Text(
-                                    '${game.removed.length} / ${game.puzzle.arrows.length} PATHS CLEARED',
+                                    '${game.removed.length} / ${game.puzzle.arrows.length} ARROWS ${widget.rescue ? 'FREED' : 'CLEARED'}',
                                     style: const TextStyle(
                                       fontFamily: 'ArrowNovaSans',
                                       fontSize: 12,
@@ -833,6 +863,41 @@ class _GameScreenState extends State<GameScreen>
                                       color: Color(0xFF647C8F),
                                     ),
                                   ),
+                                  if (widget.rescue)
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        18,
+                                        10,
+                                        18,
+                                        0,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            RescueCatalog.animal(
+                                              game.puzzle.level,
+                                            ),
+                                            style: const TextStyle(
+                                              fontSize: 26,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 9),
+                                          const Flexible(
+                                            child: Text(
+                                              'Help me, please! Clear the arrows to set me free.',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: Color(0xFF346E5E),
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(
                                       28,
@@ -1137,6 +1202,8 @@ class _GameScreenState extends State<GameScreen>
                         ? (trainingRound == 1
                               ? 'Practice round 2'
                               : 'Start Level ${widget.level}')
+                        : widget.rescue
+                        ? 'RESCUE MISSION ${game.puzzle.level} / ${RescueCatalog.count}'
                         : widget.endless
                         ? 'Next round'
                         : 'Next level')

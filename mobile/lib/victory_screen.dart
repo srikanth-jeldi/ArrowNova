@@ -10,6 +10,9 @@ class VictoryScreen extends StatelessWidget {
     required this.level,
     this.dailyLabel,
     this.endless = false,
+    this.rescueMode = false,
+    this.rescueAnimal,
+    this.rescueFinishedAll = false,
     required this.stars,
     required this.moves,
     required this.elapsed,
@@ -27,6 +30,8 @@ class VictoryScreen extends StatelessWidget {
   final bool allowReplay;
   final bool waitingForAd;
   final bool endless;
+  final bool rescueMode, rescueFinishedAll;
+  final String? rescueAnimal;
   final String? dailyLabel;
   final Duration elapsed;
   final bool firstCompletion;
@@ -88,8 +93,10 @@ class VictoryScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              const Text(
-                                'Beautifully solved!',
+                              Text(
+                                rescueMode
+                                    ? 'Thank you!'
+                                    : 'Beautifully solved!',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontFamily: 'ArrowNovaSans',
@@ -105,6 +112,13 @@ class VictoryScreen extends StatelessWidget {
                                   ],
                                 ),
                               ),
+                              if (rescueMode && rescueAnimal != null) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  rescueAnimal!,
+                                  style: const TextStyle(fontSize: 48),
+                                ),
+                              ],
                               const SizedBox(height: 5),
                               VictoryPraise(stars: stars),
                               // Give the tree canopy breathing room without
@@ -180,6 +194,10 @@ class VictoryScreen extends StatelessWidget {
                               GoldButton(
                                 label: waitingForAd
                                     ? 'Opening ad...'
+                                    : rescueMode
+                                    ? rescueFinishedAll
+                                          ? 'All animals rescued!'
+                                          : 'Rescue mission ${level} complete'
                                     : endless
                                     ? 'Next round'
                                     : dailyLabel != null
@@ -213,6 +231,10 @@ class VictoryScreen extends StatelessWidget {
                               Text(
                                 dailyLabel != null
                                     ? 'DAILY $dailyLabel COMPLETE'
+                                    : rescueMode
+                                    ? rescueFinishedAll
+                                          ? 'All rescues complete!'
+                                          : 'Rescue another animal'
                                     : endless
                                     ? 'ENDLESS ROUND $level COMPLETE'
                                     : 'LEVEL ${level.toString().padLeft(2, '0')} COMPLETE',

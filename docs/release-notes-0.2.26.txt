@@ -1,0 +1,5 @@
+<en-GB>
+• Tap + to choose room decorations and change or remove placed items.
+• Improved pillow placement and added a Perfect celebration symbol.
+• Improved saved-progress handling and room gallery performance.
+</en-GB>

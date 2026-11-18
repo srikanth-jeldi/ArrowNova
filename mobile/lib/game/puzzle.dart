@@ -113,6 +113,8 @@ class LevelCatalog {
     if (level <= 30 &&
         run != null &&
         run['layout'] != GameSession(current).layoutKey) {
+      final lanes = _gentle(level, endless: false);
+      if (run['layout'] == GameSession(lanes).layoutKey) return lanes;
       final previous = get(level, legacy: true);
       if (run['layout'] == GameSession(previous).layoutKey) return previous;
     }
@@ -144,9 +146,20 @@ class LevelCatalog {
 
   // Independent lanes create short, visible removal chains without cycles.
   // The seed is tied to the round, so retry and resume always use the same board.
-  static Puzzle _gentle(int level, {required bool endless}) {
-    final random = Random(7429 + level * 101 + (endless ? 918273 : 0));
-    final count = endless
+  static Puzzle _gentle(
+    int level, {
+    required bool endless,
+    bool rescue = false,
+  }) {
+    final random = Random(
+      7429 + level * 101 + (endless ? 918273 : 0) + (rescue ? 5210017 : 0),
+    );
+    final count = rescue
+        ? 6 +
+              (level.clamp(1, RescueCatalog.count) - 1) *
+                  74 ~/
+                  (RescueCatalog.count - 1)
+        : endless
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
     final chain = level <= 5
@@ -192,13 +205,65 @@ class LevelCatalog {
     return Puzzle(level, width, height, paths);
   }
 
+  // Disjoint bent tiles create short acyclic removal chains.
+  static Puzzle _circuit(int level) {
+    final count = arrowCount(level);
+    final columns = level <= 5
+        ? 2
+        : level <= 10
+        ? 3
+        : level <= 20
+        ? 4
+        : 5;
+    final rows = (count / columns).ceil();
+    final width = columns * 6 + 1, height = rows * 5 + 1;
+    final random = Random(19391 + level * 137);
+    final arrows = <ArrowPath>[];
+    for (var row = 0; row < rows; row++) {
+      final flip = (row + level).isOdd;
+      for (var col = 0; col < columns && arrows.length < count; col++) {
+        final x = 1 + col * 6, y = 1 + row * 5;
+        final variant = random.nextInt(2);
+        final cells = <Cell>[
+          if (level > 10 && variant == 1) ...[
+            Cell(x + 1, y + 3),
+            Cell(x, y + 3),
+          ],
+          Cell(x, variant == 0 ? y : y + 2),
+          Cell(x, y + 1),
+          Cell(x + 1, y + 1),
+          Cell(x + 2, y + 1),
+          Cell(x + 2, y),
+          Cell(x + 3, y),
+        ];
+        arrows.add(
+          ArrowPath(
+            arrows.length,
+            cells.map((c) {
+              final a = flip ? Cell(width - 1 - c.x, c.y) : c;
+              return level.isEven ? Cell(a.y, width - 1 - a.x) : a;
+            }).toList(),
+          ),
+        );
+      }
+    }
+    return Puzzle(
+      level,
+      level.isEven ? height : width,
+      level.isEven ? width : height,
+      arrows,
+    );
+  }
+
   static Puzzle _generate(
     int level, {
     bool legacy = false,
     bool endless = false,
+    bool rescue = false,
   }) {
+    if (rescue) return _gentle(level, endless: true, rescue: true);
     if (endless || (level <= 30 && !legacy)) {
-      return _gentle(level, endless: endless);
+      return endless ? _gentle(level, endless: true) : _circuit(level);
     }
     final hard = level % 10 == 0;
     final random = Random(7429 + level * 101);
@@ -372,6 +437,19 @@ class EndlessCatalog {
     if (_cache.containsKey(round)) return _cache[round]!;
     if (_cache.length >= 24) _cache.remove(_cache.keys.first);
     return _cache[round] = LevelCatalog._generate(round, endless: true);
+  }
+}
+
+class RescueCatalog {
+  static const count = 3000;
+  static final Map<int, Puzzle> _cache = {};
+  static const animals = ['🦜', '🐦', '🐰', '🦊', '🐢', '🦔'];
+  static String animal(int round) => animals[(round - 1) % animals.length];
+  static Puzzle get(int round) {
+    if (round < 1 || round > count) throw RangeError.range(round, 1, count);
+    if (_cache.containsKey(round)) return _cache[round]!;
+    if (_cache.length >= 24) _cache.remove(_cache.keys.first);
+    return _cache[round] = LevelCatalog._generate(round, rescue: true);
   }
 }
 

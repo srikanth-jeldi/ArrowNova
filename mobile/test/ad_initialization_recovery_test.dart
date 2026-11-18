@@ -41,7 +41,11 @@ void main() {
         ConsentInformation.instance = original;
         debugDefaultTargetPlatformOverride = null;
       });
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
       await ads.initialize();
+      await tester.pump();
+      expect(consent.requests, 0);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pump();
       expect(consent.requests, 1);
       await tester.pump(const Duration(seconds: 30));

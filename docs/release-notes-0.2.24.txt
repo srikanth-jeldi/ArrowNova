@@ -1,0 +1,4 @@
+<en-GB>
+Reduced download size by removing an unused bundled font.
+Includes the 3D Home Decor room, furniture choices, garden customisation and saved layouts.
+</en-GB>

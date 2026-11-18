@@ -1,0 +1,6 @@
+<en-GB>
+• Smoother arrow movement with a gentle return animation when blocked.
+• New 2D Home Decor: decorate rooms with sofas, cushions, rugs, curtains, lighting and more.
+• Choose matching or contrasting styles for warm, pink and blue rooms.
+• Unlock premium decor with optional rewarded ads for each room, and save completed designs to your gallery.
+</en-GB>

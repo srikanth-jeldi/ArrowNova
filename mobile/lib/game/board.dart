@@ -184,6 +184,36 @@ class ArrowPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     canvas.clipRect(Offset.zero & size);
+    if (blocked && !reducedMotion && progress > 0) {
+      // A brief three-sided red vignette makes a blocked exit read instantly,
+      // while leaving the lower edge clear for the controls below the board.
+      final inset = max(8.0, min(16.0, min(size.width, size.height) * .035));
+      final frame = Path()
+        ..moveTo(inset, size.height - inset)
+        ..lineTo(inset, inset)
+        ..lineTo(size.width - inset, inset)
+        ..lineTo(size.width - inset, size.height - inset);
+      final pulse = sin(progress * pi).clamp(0.0, 1.0);
+      canvas.drawPath(
+        frame,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = max(10, min(size.width, size.height) * .07)
+          ..color = const Color(0xFFFF244A).withValues(alpha: pulse * .48)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22),
+      );
+      canvas.drawPath(
+        frame,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = 3
+          ..color = const Color(0xFFE51D42).withValues(alpha: pulse * .56),
+      );
+    }
     for (final arrow in game.puzzle.arrows) {
       if (game.removed.contains(arrow.id) && arrow.id != activeId) continue;
       canvas.save();

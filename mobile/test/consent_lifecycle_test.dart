@@ -53,6 +53,7 @@ void main() {
         );
         debugDefaultTargetPlatformOverride = null;
       });
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await ads.initialize();
       await tester.pump();
       await tester.pump(const Duration(minutes: 2));

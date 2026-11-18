@@ -1,0 +1,7 @@
+<en-GB>
+• Try Animal Rescue, a separate 3,000-mission mode with a new animal to help on every mission.
+• Clear every arrow to free your animal. It will thank you when the mission is complete.
+• Rescue progress saves independently and first-time rescues earn coins and garden points.
+• Blocked arrows now pulse a red glow along three sides of the board.
+• Arrow counters show how many arrows are cleared or freed in every mode.
+</en-GB>

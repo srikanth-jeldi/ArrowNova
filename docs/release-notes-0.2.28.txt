@@ -1,0 +1,6 @@
+<en-GB>
+• Celebrate completed puzzles with colourful fireworks, happy emojis and varied praise on the game board.
+• Enjoy a clearer two-second celebration before the results screen.
+• Improved red feedback when blocked arrows move back into place.
+• Stability, ad recovery and daily reminder improvements.
+</en-GB>

@@ -1,0 +1,6 @@
+<en-GB>
+• Improved stability when returning to the game after switching apps or locking your screen.
+• Improved ad loading, retry and recovery behaviour.
+• Improved handling of audio and device feedback errors.
+• Fixed daily reminder setup on devices using older time zone names.
+</en-GB>

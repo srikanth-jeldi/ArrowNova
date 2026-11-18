@@ -127,6 +127,8 @@ class GameAds with WidgetsBindingObserver {
     }
     if (!_started) {
       _started = true;
+      _foreground =
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
       WidgetsBinding.instance.addObserver(this);
       _scheduleRecovery();
     }
@@ -177,6 +179,7 @@ class GameAds with WidgetsBindingObserver {
   }
 
   Future<void> _refreshConsent() async {
+    if (!_foreground) return;
     try {
       privacyRequired.value =
           await ConsentInformation.instance
@@ -192,6 +195,7 @@ class GameAds with WidgetsBindingObserver {
         _rewarded = null;
         return;
       }
+      if (!_foreground) return;
       if (!ready.value && !_initializing) {
         _initializing = true;
         try {

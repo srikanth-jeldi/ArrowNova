@@ -98,6 +98,7 @@ class _HomeDecorScreenState extends State<HomeDecorScreen> {
 
   int category = 0;
   bool ownedOnly = false, busy = false;
+  bool coinsOnly = false;
   HomeDecorProgress get progress => widget.progress.homeDecor;
   DecorRoom get room => progress.current;
   void save(VoidCallback change) {
@@ -296,6 +297,24 @@ class _HomeDecorScreenState extends State<HomeDecorScreen> {
                         style: TextStyle(color: _ink, fontSize: 12),
                       ),
                     ] else ...[
+                      if (decorPiece(room.wish ?? '') case final target?)
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.favorite, color: _accent),
+                            title: Text(
+                              'Wishlist · ${target.name}',
+                              style: const TextStyle(color: _ink),
+                            ),
+                            subtitle: Text(
+                              wishDetail(target),
+                              style: const TextStyle(color: _accent),
+                            ),
+                            onTap: () => setState(() {
+                              category = target.categoryIndex;
+                              ownedOnly = false;
+                            }),
+                          ),
+                        ),
                       Text(
                         'Pick a detail. Make it yours.',
                         key: choicesKey,
@@ -344,10 +363,20 @@ class _HomeDecorScreenState extends State<HomeDecorScreen> {
                           ),
                         ],
                       ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10),
+                      FilterChip(
+                        label: const Text('Shop with coins'),
+                        selected: coinsOnly,
+                        onSelected: busy
+                            ? null
+                            : (value) => setState(() {
+                                coinsOnly = value;
+                                if (value) ownedOnly = false;
+                              }),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         child: Text(
-                          '7 starter pieces are yours free. Premium: 3 optional ads per item, for this room only. Progress saves after each earned ad.',
+                          'Coin décor shop · ${widget.progress.coins} coins. ${decorCollections.length - 4} coin collections with different shapes and finishes. Purchases are for this room only. Starter items are free; premium items still use 3 optional ads.',
                           style: TextStyle(
                             color: _ink,
                             fontSize: 12,
@@ -358,7 +387,8 @@ class _HomeDecorScreenState extends State<HomeDecorScreen> {
                       for (final item in decorPieces.where(
                         (i) =>
                             i.categoryIndex == category &&
-                            (!ownedOnly || room.owns(i)),
+                            (!ownedOnly || room.owns(i)) &&
+                            (!coinsOnly || i.coinItem),
                       ))
                         card(item),
                       const SizedBox(height: 8),
@@ -390,6 +420,12 @@ class _HomeDecorScreenState extends State<HomeDecorScreen> {
         ),
       ),
     );
+  }
+
+  String wishDetail(DecorPiece item) {
+    final cost = widget.progress.wishCost(item);
+    if (cost.missing == 0) return 'Ready to buy · ${item.price} coins';
+    return '${cost.missing} more coins · ${cost.levels} new level ${cost.levels == 1 ? 'win' : 'wins'} at 40 coins each';
   }
 
   Widget card(DecorPiece item) {
@@ -433,13 +469,34 @@ class _HomeDecorScreenState extends State<HomeDecorScreen> {
                     style: const TextStyle(color: _accent, fontSize: 11),
                   ),
                   Text(
-                    item.premium
+                    item.coinItem
+                        ? (owns
+                              ? 'Owned · this room'
+                              : '${item.price} coins · this room only')
+                        : item.premium
                         ? owns
                               ? 'Owned · this room'
                               : 'Premium · ${room.adsFor(item)}/3 ads · this room only'
                         : 'Owned · free in every room',
                     style: const TextStyle(color: _ink, fontSize: 11),
                   ),
+                  if (item.coinItem && !owns)
+                    TextButton.icon(
+                      key: ValueKey('wish-${item.id}'),
+                      icon: Icon(
+                        room.wish == item.id
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                      ),
+                      label: Text(
+                        room.wish == item.id ? 'Remove wish' : 'Wishlist',
+                      ),
+                      onPressed: busy
+                          ? null
+                          : () => save(() => room.toggleWish(item)),
+                    ),
+                  if (room.wish == item.id)
+                    Text(wishDetail(item), style: const TextStyle(color: _ink)),
                   const SizedBox(height: 4),
                   FilledButton.tonalIcon(
                     key: ValueKey('decor-action-${item.id}'),
@@ -455,12 +512,20 @@ class _HomeDecorScreenState extends State<HomeDecorScreen> {
                             room.place(item);
                             showRoom();
                           })
+                        : item.coinItem
+                        ? (widget.progress.coins < item.price
+                              ? null
+                              : () => save(() {
+                                  widget.progress.buyDecor(item);
+                                }))
                         : () => watch(item),
                     icon: Icon(
                       placed
                           ? Icons.remove_circle_outline
                           : owns
                           ? Icons.add
+                          : item.coinItem
+                          ? Icons.monetization_on_outlined
                           : Icons.play_circle_outline,
                       size: 17,
                     ),
@@ -471,6 +536,8 @@ class _HomeDecorScreenState extends State<HomeDecorScreen> {
                           ? 'Remove'
                           : owns
                           ? 'Place'
+                          : item.coinItem
+                          ? 'Buy · ${item.price} coins'
                           : 'Watch ad (${room.adsFor(item)}/3)',
                     ),
                   ),
@@ -710,7 +777,7 @@ class _SpritePainter extends CustomPainter {
   ];
   @override
   void paint(Canvas canvas, Size size) {
-    final b = bounds[collection][cell];
+    final b = bounds[DecorPiece(cell, collection).sourceCollection][cell];
     final src = Rect.fromLTRB(
       b.left * image.width / 1024,
       b.top * image.height / 1536,
@@ -722,7 +789,14 @@ class _SpritePainter extends CustomPainter {
       image,
       src,
       Alignment.center.inscribe(fitted.destination, Offset.zero & size),
-      Paint()..filterQuality = FilterQuality.medium,
+      Paint()
+        ..filterQuality = FilterQuality.medium
+        ..colorFilter = DecorPiece(cell, collection).tint != null
+            ? ColorFilter.mode(
+                Color(DecorPiece(cell, collection).tint!),
+                BlendMode.modulate,
+              )
+            : null,
     );
   }
 

@@ -23,7 +23,8 @@ import 'ui.dart';
 import 'garden/garden_screen.dart';
 
 class ArrowNovaApp extends StatelessWidget {
-  const ArrowNovaApp({super.key, this.initialProgress});
+  const ArrowNovaApp({super.key, this.initialProgress, this.onHomeReady});
+  final VoidCallback? onHomeReady;
   final PlayerProgress? initialProgress;
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -57,12 +58,16 @@ class ArrowNovaApp extends StatelessWidget {
         labelSmall: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
       ),
     ),
-    home: HomeScreen(initialProgress: initialProgress),
+    home: HomeScreen(
+      initialProgress: initialProgress,
+      onHomeReady: onHomeReady,
+    ),
   );
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.initialProgress});
+  const HomeScreen({super.key, this.initialProgress, this.onHomeReady});
+  final VoidCallback? onHomeReady;
   final PlayerProgress? initialProgress;
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -77,6 +82,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool persistenceReady = false;
   bool openingLevel = false;
   bool changingReminders = false;
+  bool? lastUnfinished;
   String? storageWarning;
   @override
   void initState() {
@@ -99,18 +105,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     if (!mounted) return;
     setState(() => loading = false);
-    MusicService.instance.setEnabled(progress.music);
-    unawaited(
-      DailyReminders.instance.sync(
-        progress.dailyReminders,
-        progress.dailyStars.keys.toSet(),
-      ),
-    );
-    save();
+    final shieldChanged = progress.applyShield(DateTime.now());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(updateReminder.check(context, ready: () =>
-          mounted && !loading && !openingLevel && storageWarning == null));
+      MusicService.instance.setEnabled(progress.music);
+      if (shieldChanged) save();
+      if (progress.dailyReminders) unawaited(syncReminders());
+      widget.onHomeReady?.call();
+      unawaited(
+        updateReminder.check(
+          context,
+          ready: () =>
+              mounted && !loading && !openingLevel && storageWarning == null,
+        ),
+      );
     });
   }
 
@@ -120,15 +128,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  Future<bool> syncReminders({bool? enabled, bool permission = false}) {
+    final days = progress.dailyStars.keys.toSet();
+    final unfinished = progress.runs.isNotEmpty;
+    lastUnfinished = unfinished;
+    final streak = progress.dailyStreak(DateTime.now());
+    if (permission) {
+      return DailyReminders.instance.enable(
+        days,
+        limit: progress.reminderLimit,
+        unfinished: unfinished,
+        streak: streak,
+      );
+    }
+    return DailyReminders.instance.sync(
+      enabled ?? progress.dailyReminders,
+      days,
+      limit: progress.reminderLimit,
+      unfinished: unfinished,
+      streak: streak,
+    );
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && mounted) {
+    if (!mounted || loading) return;
+    if (state == AppLifecycleState.resumed) {
+      if (progress.applyShield(DateTime.now())) save();
       setState(() {});
-      if (widget.initialProgress == null && progress.dailyReminders) {
-        unawaited(
-          DailyReminders.instance.sync(true, progress.dailyStars.keys.toSet()),
-        );
-      }
+    }
+    if ((state == AppLifecycleState.resumed ||
+            state == AppLifecycleState.paused) &&
+        widget.initialProgress == null &&
+        progress.dailyReminders) {
+      unawaited(syncReminders());
     }
   }
 
@@ -165,12 +198,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             progress.completeDaily(today, stars);
             save();
             if (widget.initialProgress == null && progress.dailyReminders) {
-              unawaited(
-                DailyReminders.instance.sync(
-                  true,
-                  progress.dailyStars.keys.toSet(),
-                ),
-              );
+              unawaited(syncReminders());
             }
           },
           onSettingsChanged: save,
@@ -196,6 +224,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void save() {
     if (widget.initialProgress != null || !persistenceReady) return;
+    if (progress.dailyReminders && lastUnfinished != progress.runs.isNotEmpty) {
+      unawaited(syncReminders());
+    }
     MusicService.instance.setEnabled(progress.music);
     // ProgressStore captures immutable JSON synchronously before its first await.
     // Avoid rebuilding the entire growing room/gallery history on every tap.
@@ -268,6 +299,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             progress: progress,
             onComplete: (round, stars) {
               progress.completeEndless(round);
+              save();
+            },
+            onSettingsChanged: save,
+          ),
+        ),
+      );
+    } finally {
+      openingLevel = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> openRescue() async {
+    if (openingLevel || progress.nextRescueRound > RescueCatalog.count) return;
+    openingLevel = true;
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => GameScreen(
+            level: progress.nextRescueRound,
+            rescue: true,
+            progress: progress,
+            onComplete: (round, stars) {
+              progress.completeRescue(round);
               save();
             },
             onSettingsChanged: save,
@@ -363,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 SwitchListTile(
                   title: const Text('Puzzle reminders'),
                   subtitle: const Text(
-                    'Daily at 9 AM, plus one reminder after 24 hours away',
+                    'Optional local reminders for your puzzles and streak.',
                   ),
                   value: progress.dailyReminders,
                   onChanged: changingReminders
@@ -373,13 +428,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           final allowed = widget.initialProgress != null
                               ? true
                               : value
-                              ? await DailyReminders.instance.enable(
-                                  progress.dailyStars.keys.toSet(),
+                              ? await syncReminders(
+                                  enabled: true,
+                                  permission: true,
                                 )
-                              : await DailyReminders.instance.sync(
-                                  false,
-                                  progress.dailyStars.keys.toSet(),
-                                );
+                              : await syncReminders(enabled: false);
                           changingReminders = false;
                           if (!mounted) return;
                           if (allowed) {
@@ -397,6 +450,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           if (context.mounted) update(() {});
                         },
                 ),
+                if (progress.dailyReminders)
+                  ListTile(
+                    title: const Text('Daily reminder limit'),
+                    subtitle: const Text(
+                      '9 AM Daily · 1 PM unfinished puzzle · 6 PM after time away · 8:30 PM streak. Only relevant reminders are sent.',
+                    ),
+                    trailing: DropdownButton<int>(
+                      value: progress.reminderLimit,
+                      items: [
+                        for (final n in [1, 2, 4])
+                          DropdownMenuItem(value: n, child: Text('Up to $n')),
+                      ],
+                      onChanged: (n) {
+                        if (n == null) return;
+                        update(() => progress.reminderLimit = n);
+                        save();
+                        if (widget.initialProgress == null) {
+                          unawaited(syncReminders());
+                        }
+                      },
+                    ),
+                  ),
                 SwitchListTile(
                   title: const Text('Game sounds'),
                   value: progress.sound,
@@ -604,6 +679,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         'Endless puzzles',
                         'Round ${progress.nextEndlessRound} · A fresh puzzle every round',
                         openEndless,
+                      ),
+                      const SizedBox(height: 14),
+                      homeTile(
+                        Icons.pets_outlined,
+                        'Animal Rescue',
+                        progress.rescueCompleted >= RescueCatalog.count
+                            ? 'All ${RescueCatalog.count} animals rescued!'
+                            : '${progress.rescueCompleted} / ${RescueCatalog.count} rescued · Mission ${progress.nextRescueRound}',
+                        openRescue,
                       ),
                       const SizedBox(height: 14),
                       homeTile(

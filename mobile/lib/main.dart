@@ -8,8 +8,7 @@ import 'app.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ArrowNovaApp());
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    unawaited(GameAds.instance.initialize());
-  });
+  runApp(
+    ArrowNovaApp(onHomeReady: () => unawaited(GameAds.instance.initialize())),
+  );
 }
