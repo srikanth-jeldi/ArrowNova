@@ -172,9 +172,9 @@ class LevelCatalog {
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
     if (rescue && level <= 10) {
-      // Keep the rescue animal visibly enclosed by a compact ring of arrows
-      // from the first mission. These are full puzzles, not tutorial boards.
-      const width = 20, height = 22;
+      // Start at Classic level-10 circuit difficulty, with the animal
+      // enclosed by bent arrows on every side from the first mission.
+      const width = 24, height = 24;
       final centerX = width ~/ 2, centerY = height ~/ 2;
       final cage = <List<Cell>>[
         [for (var x = centerX - 4; x <= centerX + 1; x++) Cell(x, centerY - 3)],
@@ -184,21 +184,43 @@ class LevelCatalog {
         [Cell(centerX + 2, centerY - 3), Cell(centerX + 3, centerY - 3)],
         [Cell(centerX + 2, centerY + 2), Cell(centerX + 2, centerY + 3)],
       ];
+      // This six-cell bent path is the same circuit motif used by Classic 10.
+      const circuit = [
+        Cell(0, 0),
+        Cell(0, 1),
+        Cell(1, 1),
+        Cell(2, 1),
+        Cell(2, 0),
+        Cell(3, 0),
+      ];
       final top = <List<Cell>>[
-        for (final x in [6, 10, 14, 8, 12])
-          [Cell(x, 4), Cell(x, 3), Cell(x, 2)],
+        for (final x in [5, 9, 13])
+          if (x == 9 || x == 13)
+            [for (final c in circuit) Cell(x + c.y, 3 + c.x)]
+          else
+            [for (final c in circuit) Cell(x + c.y, 1 + 3 - c.x)],
+        for (final x in [1, 17])
+          [for (final c in circuit) Cell(x + c.y, 1 + 3 - c.x)],
       ];
       final bottom = <List<Cell>>[
-        for (final x in [6, 10, 14, 8, 12])
-          [Cell(x, 17), Cell(x, 18), Cell(x, 19)],
+        for (final x in [5, 9, 13])
+          [for (final c in circuit) Cell(x + c.y, 17 + c.x)],
+        for (final x in [1, 17])
+          [for (final c in circuit) Cell(x + c.y, 17 + c.x)],
       ];
       final left = <List<Cell>>[
-        for (final y in [6, 10, 14, 18, 7, 12, 17])
-          [Cell(4, y), Cell(3, y), Cell(2, y)],
+        for (final y in [5, 9, 11, 14])
+          if (y == 9 || y == 11)
+            [for (final c in circuit) Cell(1 + c.x, y + c.y)]
+          else
+            [for (final c in circuit) Cell(1 + 3 - c.x, y + c.y)],
       ];
       final right = <List<Cell>>[
-        for (final y in [6, 10, 14, 18, 7, 12, 17])
-          [Cell(15, y), Cell(16, y), Cell(17, y)],
+        for (final y in [5, 9, 11, 14])
+          if (y == 14)
+            [for (final c in circuit) Cell(18 + 3 - c.x, y + c.y)]
+          else
+            [for (final c in circuit) Cell(18 + c.x, y + c.y)],
       ];
       final ring = [
         ...top.take(3),
@@ -207,8 +229,6 @@ class LevelCatalog {
         ...right.take(4),
         ...top.skip(3),
         ...bottom.skip(3),
-        ...left.skip(4),
-        ...right.skip(4),
       ];
       final allPaths = [
         ...cage,

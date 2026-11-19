@@ -26,6 +26,8 @@ void main() {
     }
     await _capture(tester, 'classic-blocked-edges.png', 6, blockedDemo: true);
     for (var level = 1; level <= 10; level++) {
+      final puzzle = RescueCatalog.get(level);
+      expect(puzzle.solution().length, puzzle.arrows.length);
       await _capture(
         tester,
         'animal-rescue-${level.toString().padLeft(2, '0')}.png',
@@ -33,6 +35,16 @@ void main() {
         rescue: true,
       );
     }
+    final classicTen = LevelCatalog.get(10);
+    final rescueTwo = RescueCatalog.get(2);
+    expect(
+      rescueTwo.dependencyDepth,
+      greaterThanOrEqualTo(classicTen.dependencyDepth),
+    );
+    expect(
+      rescueTwo.arrows.where((arrow) => rescueTwo.canExit(arrow.id, {})).length,
+      lessThan((rescueTwo.arrows.length + 1) ~/ 2),
+    );
   });
 }
 
