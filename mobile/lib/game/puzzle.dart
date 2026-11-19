@@ -210,11 +210,39 @@ class LevelCatalog {
       paths.addAll([
         for (var i = 0; i < 4; i++) ArrowPath(cageStart + i, cage[i]),
       ]);
+      final allCells = paths.expand((path) => path.cells);
+      final minX = allCells.map((cell) => cell.x).reduce(min);
+      final minY = allCells.map((cell) => cell.y).reduce(min);
+      final maxX = allCells.map((cell) => cell.x).reduce(max);
+      final maxY = allCells.map((cell) => cell.y).reduce(max);
+      // Match the portrait reference by using the source board's vertical
+      // space fully instead of leaving broad top and bottom margins.
+      const verticalScale = 4 / 3;
+      final scaledPaths = <ArrowPath>[];
+      for (final path in paths) {
+        final cells = <Cell>[];
+        for (final cell in path.cells) {
+          final next = Cell(
+            cell.x - minX,
+            ((cell.y - minY) * verticalScale).round(),
+          );
+          if (cells.isNotEmpty && cells.last.x == next.x) {
+            final step = (next.y - cells.last.y).sign.toInt();
+            var y = cells.last.y + step;
+            while (y != next.y) {
+              cells.add(Cell(next.x, y));
+              y += step;
+            }
+          }
+          cells.add(next);
+        }
+        scaledPaths.add(ArrowPath(path.id, cells));
+      }
       return Puzzle(
         level,
-        classicHard.width,
-        classicHard.height,
-        paths,
+        maxX - minX + 1,
+        ((maxY - minY) * verticalScale).round() + 1,
+        scaledPaths,
         rescueCageIds: {cageStart, cageStart + 1, cageStart + 2, cageStart + 3},
       );
     }

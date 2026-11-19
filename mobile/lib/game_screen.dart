@@ -69,7 +69,9 @@ class _GameScreenState extends State<GameScreen>
   String? reviveMessage;
   final playTime = Stopwatch();
   int restoredMs = 0;
-  BoardTheme get activeTheme => learning
+  BoardTheme get activeTheme => widget.rescue
+      ? rescueBoardTheme
+      : learning
       ? boardThemes.first
       : levelBoardTheme(widget.progress.selectedTheme, game.puzzle.level);
   String get runKey => widget.rescue
@@ -1071,6 +1073,7 @@ class _GameScreenState extends State<GameScreen>
                   ],
                 ),
               ),
+            ),
             ),
             ),
             if (blocked && active != null && !learning && !widget.rescue &&

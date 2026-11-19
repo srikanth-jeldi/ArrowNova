@@ -51,11 +51,25 @@ void main() {
     )) {
       expect(arrow.cells.toSet().intersection(occupiedOutsideCage), isEmpty);
     }
-    final centerX = rescueTwo.width ~/ 2;
-    final centerY = rescueTwo.height ~/ 2;
+    final cageCells = rescueTwo.arrows
+        .where((arrow) => rescueTwo.rescueCageIds.contains(arrow.id))
+        .expand((arrow) => arrow.cells)
+        .toList();
+    final minX = cageCells
+        .map((cell) => cell.x)
+        .reduce((a, b) => a < b ? a : b);
+    final minY = cageCells
+        .map((cell) => cell.y)
+        .reduce((a, b) => a < b ? a : b);
+    final maxX = cageCells
+        .map((cell) => cell.x)
+        .reduce((a, b) => a > b ? a : b);
+    final maxY = cageCells
+        .map((cell) => cell.y)
+        .reduce((a, b) => a > b ? a : b);
     final animalPocket = {
-      for (var y = centerY - 4; y <= centerY + 4; y++)
-        for (var x = centerX - 5; x <= centerX + 3; x++) Cell(x, y),
+      for (var y = minY + 1; y < maxY; y++)
+        for (var x = minX + 1; x < maxX; x++) Cell(x, y),
     };
     expect(occupiedOutsideCage.intersection(animalPocket), isEmpty);
   });
@@ -150,7 +164,7 @@ Future<void> _capture(
                           child: Padding(
                             padding: const EdgeInsets.all(8),
                             child: ArrowBoard(
-                              theme: boardThemes.first,
+                              theme: rescue ? rescueBoardTheme : boardThemes.first,
                               game: game,
                               activeId: blockedDemo
                                   ? game.puzzle.arrows

@@ -54,6 +54,16 @@ const boardThemes = [
   ),
 ];
 
+const rescueBoardTheme = BoardTheme(
+  'rescue-earth',
+  'Rescue earth',
+  0,
+  Color(0xFF4C351F),
+  Color(0xFFC7A777),
+  Color(0xFF86623D),
+  Color(0xFFF8F8FA),
+);
+
 BoardTheme boardTheme(String id) => boardThemes.firstWhere(
   (theme) => theme.id == id,
   orElse: () => boardThemes.first,
