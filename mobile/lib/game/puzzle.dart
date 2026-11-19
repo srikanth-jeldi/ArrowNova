@@ -171,6 +171,60 @@ class LevelCatalog {
         : endless
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
+    if (rescue && level <= 10) {
+      // Keep the rescue animal visibly enclosed by a compact ring of arrows
+      // from the first mission. These are full puzzles, not tutorial boards.
+      const width = 20, height = 22;
+      final centerX = width ~/ 2, centerY = height ~/ 2;
+      final cage = <List<Cell>>[
+        [for (var x = centerX - 4; x <= centerX + 1; x++) Cell(x, centerY - 3)],
+        [for (var y = centerY - 2; y <= centerY + 1; y++) Cell(centerX + 2, y)],
+        [for (var x = centerX + 1; x >= centerX - 2; x--) Cell(x, centerY + 3)],
+        [for (var y = centerY + 2; y >= centerY - 1; y--) Cell(centerX - 4, y)],
+        [Cell(centerX + 2, centerY - 3), Cell(centerX + 3, centerY - 3)],
+        [Cell(centerX + 2, centerY + 2), Cell(centerX + 2, centerY + 3)],
+      ];
+      final top = <List<Cell>>[
+        for (final x in [6, 10, 14, 8, 12])
+          [Cell(x, 4), Cell(x, 3), Cell(x, 2)],
+      ];
+      final bottom = <List<Cell>>[
+        for (final x in [6, 10, 14, 8, 12])
+          [Cell(x, 17), Cell(x, 18), Cell(x, 19)],
+      ];
+      final left = <List<Cell>>[
+        for (final y in [6, 10, 14, 18, 7, 12, 17])
+          [Cell(4, y), Cell(3, y), Cell(2, y)],
+      ];
+      final right = <List<Cell>>[
+        for (final y in [6, 10, 14, 18, 7, 12, 17])
+          [Cell(15, y), Cell(16, y), Cell(17, y)],
+      ];
+      final ring = [
+        ...top.take(3),
+        ...bottom.take(3),
+        ...left.take(4),
+        ...right.take(4),
+        ...top.skip(3),
+        ...bottom.skip(3),
+        ...left.skip(4),
+        ...right.skip(4),
+      ];
+      final allPaths = [
+        ...cage,
+        for (var i = 0; i < count - cage.length; i++) ring[i],
+      ];
+      return Puzzle(
+        level,
+        width,
+        height,
+        [
+          for (var id = 0; id < allPaths.length; id++)
+            ArrowPath(id, allPaths[id]),
+        ],
+        rescueCageIds: const {0, 1, 2, 3},
+      );
+    }
     final chain = rescue
         ? (count >= 40 ? 5 : 4)
         : level <= 5

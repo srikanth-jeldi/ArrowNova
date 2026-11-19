@@ -197,7 +197,7 @@ class VictoryScreen extends StatelessWidget {
                                     : rescueMode
                                     ? rescueFinishedAll
                                           ? 'All animals rescued!'
-                                          : 'Rescue mission ${level} complete'
+                                          : 'Mission $level completed'
                                     : endless
                                     ? 'Next round'
                                     : dailyLabel != null
