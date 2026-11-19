@@ -171,14 +171,17 @@ class LevelCatalog {
         : endless
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
-    if (rescue && level == 2) {
-      // Rescue 2 keeps the Classic 20 hard layout around the animal. Replace
-      // only four paths that cross the centre with a visible cage, leaving an
+    if (rescue && level <= 2) {
+      // Rescue starts with a dense Classic 20 hard layout around the animal.
+      // Replace only four paths that cross the centre with a visible cage, leaving an
       // open pocket for the animal rather than drawing it over arrows.
       final classicHard = get(20);
       final paths = <ArrowPath>[];
       for (final arrow in classicHard.arrows) {
-        if (arrow.id == 1 || arrow.id == 6 || arrow.id == 13 || arrow.id == 19) {
+        if (arrow.id == 1 ||
+            arrow.id == 6 ||
+            arrow.id == 13 ||
+            arrow.id == 19) {
           continue;
         }
         paths.add(ArrowPath(paths.length, arrow.cells));
@@ -186,9 +189,19 @@ class LevelCatalog {
       final cageStart = paths.length;
       paths.addAll([
         ArrowPath(cageStart, [Cell(8, 8), Cell(9, 8)]),
-        ArrowPath(cageStart + 1, [Cell(10, 8), Cell(10, 9), Cell(10, 10), Cell(10, 11)]),
+        ArrowPath(cageStart + 1, [
+          Cell(10, 8),
+          Cell(10, 9),
+          Cell(10, 10),
+          Cell(10, 11),
+        ]),
         ArrowPath(cageStart + 2, [Cell(8, 11), Cell(9, 11)]),
-        ArrowPath(cageStart + 3, [Cell(7, 11), Cell(7, 10), Cell(7, 9), Cell(7, 8)]),
+        ArrowPath(cageStart + 3, [
+          Cell(7, 11),
+          Cell(7, 10),
+          Cell(7, 9),
+          Cell(7, 8),
+        ]),
       ]);
       return Puzzle(
         level,

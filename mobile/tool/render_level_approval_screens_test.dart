@@ -37,7 +37,10 @@ void main() {
       );
     }
     final classicHard = LevelCatalog.get(20);
+    final rescueOne = RescueCatalog.get(1);
     final rescueTwo = RescueCatalog.get(2);
+    expect(rescueOne.arrows.length, classicHard.arrows.length);
+    expect(rescueOne.rescueCageIds.length, 4);
     expect(rescueTwo.arrows.length, classicHard.arrows.length);
     expect(rescueTwo.rescueCageIds.length, 4);
     final occupiedOutsideCage = <Cell>{
