@@ -679,7 +679,10 @@ class _GameScreenState extends State<GameScreen>
       canPop: !busy && !reviving,
       child: Scaffold(
         bottomNavigationBar: learning ? null : const GameBanner(),
-        body: Atmosphere(
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Atmosphere(
           child: SafeArea(
             child: Center(
               child: ConstrainedBox(
@@ -1069,7 +1072,18 @@ class _GameScreenState extends State<GameScreen>
                 ),
               ),
             ),
-          ),
+            ),
+            if (blocked && active != null && !learning && !widget.rescue &&
+                !widget.endless && widget.dailyDate == null &&
+                !MediaQuery.disableAnimationsOf(context))
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: ScreenEdgeGlowPainter(animation.value),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

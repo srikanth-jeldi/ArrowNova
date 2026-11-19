@@ -167,11 +167,13 @@ class LevelCatalog {
     final rescueProgress =
         (level.clamp(1, RescueCatalog.count) - 1) / (RescueCatalog.count - 1);
     final count = rescue
-        ? 6 + (74 * sqrt(rescueProgress)).round()
+        ? 20 + (60 * sqrt(rescueProgress)).round()
         : endless
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
-    final chain = level <= 5
+    final chain = rescue
+        ? (count >= 40 ? 5 : 4)
+        : level <= 5
         ? 2
         : level <= 10
         ? 3

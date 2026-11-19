@@ -24,6 +24,7 @@ void main() {
         level,
       );
     }
+    await _capture(tester, 'classic-blocked-edges.png', 6, blockedDemo: true);
     for (var level = 1; level <= 10; level++) {
       await _capture(
         tester,
@@ -40,6 +41,7 @@ Future<void> _capture(
   String fileName,
   int level, {
   bool rescue = false,
+  bool blockedDemo = false,
 }) async {
   final game = GameSession(
     rescue ? RescueCatalog.get(level) : LevelCatalog.get(level),
@@ -51,7 +53,10 @@ Future<void> _capture(
       theme: ThemeData(fontFamily: 'ArrowNovaSans'),
       home: Scaffold(
         backgroundColor: const Color(0xFF071B33),
-        body: SafeArea(
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+          SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
             child: Column(
@@ -122,6 +127,18 @@ Future<void> _capture(
                             child: ArrowBoard(
                               theme: boardThemes.first,
                               game: game,
+                              activeId: blockedDemo
+                                  ? game.puzzle.arrows
+                                        .firstWhere(
+                                          (arrow) => !game.puzzle.canExit(
+                                            arrow.id,
+                                            game.removed,
+                                          ),
+                                        )
+                                        .id
+                                  : null,
+                              blocked: blockedDemo,
+                              progress: blockedDemo ? .5 : 0,
                               rescueAnimal: rescue
                                   ? RescueCatalog.animal(level)
                                   : null,
@@ -159,6 +176,14 @@ Future<void> _capture(
               ],
             ),
           ),
+          ),
+          if (blockedDemo)
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(painter: ScreenEdgeGlowPainter(.5)),
+              ),
+            ),
+          ],
         ),
       ),
     ),

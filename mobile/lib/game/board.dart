@@ -517,36 +517,6 @@ class ArrowPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     canvas.clipRect(Offset.zero & size);
-    if (blocked && !reducedMotion && progress > 0) {
-      // A brief three-sided red vignette makes a blocked exit read instantly,
-      // while leaving the lower edge clear for the controls below the board.
-      final inset = max(8.0, min(16.0, min(size.width, size.height) * .035));
-      final frame = Path()
-        ..moveTo(inset, size.height - inset)
-        ..lineTo(inset, inset)
-        ..lineTo(size.width - inset, inset)
-        ..lineTo(size.width - inset, size.height - inset);
-      final pulse = sin(progress * pi).clamp(0.0, 1.0);
-      canvas.drawPath(
-        frame,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = max(10, min(size.width, size.height) * .07)
-          ..color = const Color(0xFFFF244A).withValues(alpha: pulse * .48)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22),
-      );
-      canvas.drawPath(
-        frame,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..strokeWidth = 3
-          ..color = const Color(0xFFE51D42).withValues(alpha: pulse * .56),
-      );
-    }
     for (final arrow in game.puzzle.arrows) {
       if (game.removed.contains(arrow.id) && arrow.id != activeId) continue;
       canvas.save();
@@ -819,6 +789,65 @@ class ArrowPainter extends CustomPainter {
   bool shouldRepaint(covariant ArrowPainter oldDelegate) => true;
   @override
   bool shouldRebuildSemantics(covariant ArrowPainter oldDelegate) => true;
+}
+
+/// Pulsing warning around the physical game viewport when a move is blocked.
+/// Kept outside the board so the warning reads as a screen-edge effect.
+class ScreenEdgeGlowPainter extends CustomPainter {
+  const ScreenEdgeGlowPainter(this.progress);
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pulse = sin(progress * pi).clamp(0.0, 1.0);
+    if (pulse <= 0) return;
+    final thickness = min(58.0, min(size.width, size.height) * .09);
+    final alpha = (.62 * pulse).clamp(0.0, 1.0);
+    final edges = <(Rect, Alignment, Alignment)>[
+      (
+        Rect.fromLTWH(0, 0, size.width, thickness),
+        Alignment.topCenter,
+        Alignment.bottomCenter,
+      ),
+      (
+        Rect.fromLTWH(0, size.height - thickness, size.width, thickness),
+        Alignment.bottomCenter,
+        Alignment.topCenter,
+      ),
+      (
+        Rect.fromLTWH(0, 0, thickness, size.height),
+        Alignment.centerLeft,
+        Alignment.centerRight,
+      ),
+      (
+        Rect.fromLTWH(size.width - thickness, 0, thickness, size.height),
+        Alignment.centerRight,
+        Alignment.centerLeft,
+      ),
+    ];
+    for (final (rect, begin, end) in edges) {
+      final paint = Paint()
+        ..shader = LinearGradient(
+          begin: begin,
+          end: end,
+          colors: [Color.fromRGBO(238, 36, 62, alpha), Colors.transparent],
+        ).createShader(rect)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9);
+      canvas.drawRect(rect, paint);
+    }
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..color = Color.fromRGBO(238, 36, 62, alpha * .72),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant ScreenEdgeGlowPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
 
 /// The tail follows the original bends while the head travels along its exit
