@@ -181,6 +181,17 @@ class LevelCatalog {
         if (arrow.id == 2 || arrow.id == 3 || arrow.id == 4) continue;
         paths.add(ArrowPath(paths.length, arrow.cells));
       }
+      // Add two chained blockers to the short clear path and three to the
+      // lower circuit so Rescue 2 is deliberately tougher than Classic 10.
+      paths.add(ArrowPath(paths.length, [Cell(10, 13), Cell(11, 13)]));
+      paths.add(
+        ArrowPath(paths.length, [Cell(12, 12), Cell(12, 13), Cell(13, 13)]),
+      );
+      paths.add(ArrowPath(paths.length, [Cell(8, 16), Cell(9, 16)]));
+      paths.add(
+        ArrowPath(paths.length, [Cell(10, 15), Cell(10, 16), Cell(11, 16)]),
+      );
+      paths.add(ArrowPath(paths.length, [Cell(12, 16), Cell(13, 16)]));
       final cageStart = paths.length;
       paths.addAll([
         ArrowPath(cageStart, [for (var x = 8; x <= 11; x++) Cell(x, 7)]),

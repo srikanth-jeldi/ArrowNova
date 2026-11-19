@@ -37,9 +37,10 @@ void main() {
     }
     final classicTen = LevelCatalog.get(10);
     final rescueTwo = RescueCatalog.get(2);
+    expect(rescueTwo.arrows.length, greaterThan(classicTen.arrows.length));
     expect(
       rescueTwo.dependencyDepth,
-      greaterThanOrEqualTo(classicTen.dependencyDepth),
+      greaterThan(classicTen.dependencyDepth),
     );
     expect(
       rescueTwo.arrows.where((arrow) => rescueTwo.canExit(arrow.id, {})).length,
