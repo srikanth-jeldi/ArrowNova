@@ -76,7 +76,7 @@ class ArrowBoard extends StatelessWidget {
                 child: IgnorePointer(
                   child: Center(
                     child: CustomPaint(
-                      size: const Size(44, 48),
+                      size: const Size(62, 66),
                       painter: RescueAnimalPainter(rescueAnimal!),
                     ),
                   ),
@@ -455,7 +455,7 @@ class BoardGeometry {
         (topLeft.dx + bottomRight.dx) / 2,
         (topLeft.dy + bottomRight.dy) / 2,
       ),
-      min(24, max(20, step * 1.15)),
+      min(38, max(34, step * 3.8)),
     );
   }
 

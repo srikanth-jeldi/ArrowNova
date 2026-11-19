@@ -54,8 +54,8 @@ void main() {
     final centerX = rescueTwo.width ~/ 2;
     final centerY = rescueTwo.height ~/ 2;
     final animalPocket = {
-      for (var y = centerY - 2; y <= centerY + 2; y++)
-        for (var x = centerX - 3; x <= centerX + 1; x++) Cell(x, y),
+      for (var y = centerY - 4; y <= centerY + 4; y++)
+        for (var x = centerX - 5; x <= centerX + 3; x++) Cell(x, y),
     };
     expect(occupiedOutsideCage.intersection(animalPocket), isEmpty);
   });

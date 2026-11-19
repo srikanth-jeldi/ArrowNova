@@ -172,26 +172,38 @@ class LevelCatalog {
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
     if (rescue && level <= 2) {
-      // Rescue starts from a packed Classic 200 hard layout. Clear a
+      // Rescue starts from a packed Classic 400 hard layout. Clear a
       // generous central pocket so the animal and its cage remain unobscured.
-      final classicHard = get(200);
+      final classicHard = get(400);
       final centerX = classicHard.width ~/ 2;
       final centerY = classicHard.height ~/ 2;
       final protected = {
-        for (var y = centerY - 4; y <= centerY + 4; y++)
-          for (var x = centerX - 5; x <= centerX + 4; x++) Cell(x, y),
+        for (var y = centerY - 6; y <= centerY + 6; y++)
+          for (var x = centerX - 7; x <= centerX + 5; x++) Cell(x, y),
       };
       final cage = <List<Cell>>[
-        [for (var x = centerX - 4; x <= centerX + 1; x++) Cell(x, centerY - 3)],
-        [for (var y = centerY - 2; y <= centerY + 1; y++) Cell(centerX + 2, y)],
-        [for (var x = centerX + 1; x >= centerX - 2; x--) Cell(x, centerY + 3)],
-        [for (var y = centerY + 2; y >= centerY - 1; y--) Cell(centerX - 4, y)],
-        [Cell(centerX + 2, centerY - 3), Cell(centerX + 3, centerY - 3)],
-        [Cell(centerX + 2, centerY + 2), Cell(centerX + 2, centerY + 3)],
+        [for (var x = centerX - 6; x <= centerX + 3; x++) Cell(x, centerY - 5)],
+        [for (var y = centerY - 4; y <= centerY + 4; y++) Cell(centerX + 4, y)],
+        [for (var x = centerX + 3; x >= centerX - 5; x--) Cell(x, centerY + 5)],
+        [for (var y = centerY + 4; y >= centerY - 4; y--) Cell(centerX - 6, y)],
+        [Cell(centerX + 4, centerY - 5), Cell(centerX + 5, centerY - 5)],
+        [Cell(centerX + 4, centerY + 4), Cell(centerX + 4, centerY + 5)],
       ];
+      final cageExitRays = <Cell>{};
+      for (final path in cage.take(4)) {
+        final direction = path.last - path[path.length - 2];
+        var cell = path.last + direction;
+        while (classicHard.contains(cell)) {
+          cageExitRays.add(cell);
+          cell = cell + direction;
+        }
+      }
       final paths = <ArrowPath>[];
       for (final arrow in classicHard.arrows) {
-        if (arrow.cells.any(protected.contains)) continue;
+        if (arrow.cells.any(protected.contains) ||
+            arrow.cells.any(cageExitRays.contains)) {
+          continue;
+        }
         paths.add(ArrowPath(paths.length, arrow.cells));
       }
       final cageStart = paths.length;
