@@ -38,8 +38,26 @@ void main() {
     }
     final classicHard = LevelCatalog.get(20);
     final rescueTwo = RescueCatalog.get(2);
-    expect(GameSession(rescueTwo).layoutKey, GameSession(classicHard).layoutKey);
     expect(rescueTwo.arrows.length, classicHard.arrows.length);
+    expect(rescueTwo.rescueCageIds.length, 4);
+    final occupiedOutsideCage = <Cell>{
+      for (final arrow in rescueTwo.arrows)
+        if (!rescueTwo.rescueCageIds.contains(arrow.id)) ...arrow.cells,
+    };
+    for (final arrow in rescueTwo.arrows.where(
+      (arrow) => rescueTwo.rescueCageIds.contains(arrow.id),
+    )) {
+      expect(arrow.cells.toSet().intersection(occupiedOutsideCage), isEmpty);
+    }
+    expect(
+      occupiedOutsideCage.intersection({
+        const Cell(8, 9),
+        const Cell(9, 9),
+        const Cell(8, 10),
+        const Cell(9, 10),
+      }),
+      isEmpty,
+    );
   });
 }
 

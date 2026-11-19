@@ -430,8 +430,33 @@ class BoardGeometry {
   );
 
   RescuePlacement? get rescuePlacement {
-    final center = Cell(puzzle.width ~/ 2, puzzle.height ~/ 2);
-    return RescuePlacement(point(center), min(24, max(20, step * 1.4)));
+    final cage = puzzle.arrows.where(
+      (arrow) => puzzle.rescueCageIds.contains(arrow.id),
+    );
+    if (cage.isEmpty) {
+      return RescuePlacement(
+        point(Cell(puzzle.width ~/ 2, puzzle.height ~/ 2)),
+        min(24, max(20, step * 1.4)),
+      );
+    }
+    var minX = puzzle.width, minY = puzzle.height, maxX = 0, maxY = 0;
+    for (final arrow in cage) {
+      for (final cell in arrow.cells) {
+        minX = min(minX, cell.x);
+        minY = min(minY, cell.y);
+        maxX = max(maxX, cell.x);
+        maxY = max(maxY, cell.y);
+      }
+    }
+    final topLeft = point(Cell(minX, minY));
+    final bottomRight = point(Cell(maxX, maxY));
+    return RescuePlacement(
+      Offset(
+        (topLeft.dx + bottomRight.dx) / 2,
+        (topLeft.dy + bottomRight.dy) / 2,
+      ),
+      min(24, max(20, step * 1.15)),
+    );
   }
 
   int? hit(Offset position, Set<int> removed) {
