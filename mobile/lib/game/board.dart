@@ -75,15 +75,10 @@ class ArrowBoard extends StatelessWidget {
                 height: rescuePlacement.radius * 2,
                 child: IgnorePointer(
                   child: Center(
-                    child: rescueAnimal == '🦜'
-                        ? const CustomPaint(
-                            size: Size(44, 48),
-                            painter: RescueParrotPainter(),
-                          )
-                        : Text(
-                            rescueAnimal!,
-                            style: const TextStyle(fontSize: 34),
-                          ),
+                    child: CustomPaint(
+                      size: const Size(44, 48),
+                      painter: RescueAnimalPainter(rescueAnimal!),
+                    ),
                   ),
                 ),
               ),
@@ -263,6 +258,161 @@ class RescueParrotPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant RescueParrotPainter oldDelegate) => false;
+}
+
+class RescueAnimalPainter extends CustomPainter {
+  const RescueAnimalPainter(this.animal);
+  final String animal;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (animal == '🦜') {
+      const RescueParrotPainter().paint(canvas, size);
+      return;
+    }
+    canvas.save();
+    canvas.scale(size.width / 44, size.height / 48);
+    final shadow = Paint()..color = const Color(0x33152535);
+    canvas.drawOval(const Rect.fromLTWH(7, 42, 31, 4), shadow);
+    final eye = Paint()..color = const Color(0xFF203441);
+    final white = Paint()..color = Colors.white;
+    final feet = Paint()
+      ..color = const Color(0xFFD97844)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    if (animal == '🐰') {
+      final fur = Paint()..color = const Color(0xFFF3E9D8);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(10, 0, 10, 24),
+          const Radius.circular(6),
+        ),
+        fur,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(24, 0, 10, 24),
+          const Radius.circular(6),
+        ),
+        fur,
+      );
+      canvas.drawOval(const Rect.fromLTWH(7, 22, 32, 21), fur);
+      canvas.drawCircle(const Offset(23, 20), 13, fur);
+      canvas.drawCircle(const Offset(18, 18), 3.2, white);
+      canvas.drawCircle(const Offset(18.7, 18.5), 1.6, eye);
+      canvas.drawOval(
+        const Rect.fromLTWH(23, 23, 11, 7),
+        Paint()..color = const Color(0xFFFFF9EF),
+      );
+      canvas.drawCircle(
+        const Offset(27, 25),
+        1.5,
+        Paint()..color = const Color(0xFFD88791),
+      );
+    } else if (animal == '🦊') {
+      final orange = Paint()..color = const Color(0xFFEA873A);
+      canvas.drawPath(
+        Path()
+          ..moveTo(10, 20)
+          ..lineTo(12, 3)
+          ..lineTo(23, 12)
+          ..lineTo(34, 3)
+          ..lineTo(37, 20)
+          ..close(),
+        orange,
+      );
+      canvas.drawOval(const Rect.fromLTWH(7, 21, 32, 21), orange);
+      canvas.drawCircle(const Offset(23, 19), 13, orange);
+      canvas.drawOval(
+        const Rect.fromLTWH(18, 24, 18, 11),
+        Paint()..color = const Color(0xFFFFF0D8),
+      );
+      canvas.drawCircle(const Offset(18, 17), 3.2, white);
+      canvas.drawCircle(const Offset(18.7, 17.5), 1.6, eye);
+      canvas.drawCircle(const Offset(31, 30), 2, eye);
+    } else if (animal == '🐢') {
+      final green = Paint()..color = const Color(0xFF72B968);
+      canvas.drawOval(const Rect.fromLTWH(7, 16, 31, 24), green);
+      canvas.drawOval(
+        const Rect.fromLTWH(10, 14, 25, 24),
+        Paint()..color = const Color(0xFF687A43),
+      );
+      canvas.drawCircle(const Offset(38, 26), 7, green);
+      for (final point in const [
+        Offset(13, 37),
+        Offset(31, 37),
+        Offset(13, 18),
+        Offset(31, 18),
+      ]) {
+        canvas.drawCircle(point, 3, green);
+      }
+      canvas.drawCircle(const Offset(40, 24), 1.2, eye);
+      final shell = Paint()
+        ..color = const Color(0xFFB4C675)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2;
+      canvas.drawLine(const Offset(22, 15), const Offset(22, 37), shell);
+      canvas.drawLine(const Offset(11, 26), const Offset(34, 26), shell);
+    } else if (animal == '🦔') {
+      final quills = Paint()..color = const Color(0xFF79513E);
+      final spikes = Path()..moveTo(7, 34);
+      for (var i = 0; i < 7; i++) {
+        final x = 8 + i * 4.0;
+        spikes
+          ..lineTo(x + 2, 8 + (i.isEven ? 0 : 3))
+          ..lineTo(x + 5, 34);
+      }
+      spikes.close();
+      canvas.drawPath(spikes, quills);
+      canvas.drawOval(
+        const Rect.fromLTWH(12, 21, 30, 19),
+        Paint()..color = const Color(0xFFE6B17D),
+      );
+      canvas.drawCircle(const Offset(34, 26), 3, white);
+      canvas.drawCircle(const Offset(35, 26.5), 1.5, eye);
+      canvas.drawCircle(const Offset(40, 32), 2, eye);
+    } else {
+      final blue = Paint()..color = const Color(0xFF42A9C5);
+      canvas.drawPath(
+        Path()
+          ..moveTo(13, 26)
+          ..quadraticBezierTo(4, 32, 7, 39)
+          ..quadraticBezierTo(14, 36, 19, 31)
+          ..close(),
+        Paint()..color = const Color(0xFF2397A0),
+      );
+      canvas.drawOval(const Rect.fromLTWH(10, 17, 26, 25), blue);
+      canvas.drawCircle(
+        const Offset(25, 14),
+        10,
+        Paint()..color = const Color(0xFF4DBB93),
+      );
+      canvas.drawOval(
+        const Rect.fromLTWH(20, 25, 13, 15),
+        Paint()..color = const Color(0xFFFFD65F),
+      );
+      canvas.drawPath(
+        Path()
+          ..moveTo(33, 16)
+          ..lineTo(43, 19)
+          ..lineTo(33, 23)
+          ..close(),
+        Paint()..color = const Color(0xFFFF7137),
+      );
+      canvas.drawCircle(const Offset(28, 12), 4, white);
+      canvas.drawCircle(const Offset(29, 12.5), 2, eye);
+    }
+    canvas.drawLine(const Offset(18, 39), const Offset(17, 43), feet);
+    canvas.drawLine(const Offset(17, 43), const Offset(13, 43), feet);
+    canvas.drawLine(const Offset(28, 39), const Offset(29, 43), feet);
+    canvas.drawLine(const Offset(29, 43), const Offset(33, 43), feet);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant RescueAnimalPainter oldDelegate) =>
+      animal != oldDelegate.animal;
 }
 
 class BoardGeometry {

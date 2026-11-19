@@ -164,11 +164,10 @@ class LevelCatalog {
     final random = Random(
       7429 + level * 101 + (endless ? 918273 : 0) + (rescue ? 5210017 : 0),
     );
+    final rescueProgress =
+        (level.clamp(1, RescueCatalog.count) - 1) / (RescueCatalog.count - 1);
     final count = rescue
-        ? 6 +
-              (level.clamp(1, RescueCatalog.count) - 1) *
-                  74 ~/
-                  (RescueCatalog.count - 1)
+        ? 6 + (74 * sqrt(rescueProgress)).round()
         : endless
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);

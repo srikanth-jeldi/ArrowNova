@@ -6,9 +6,7 @@ import 'package:arrownova/game/board_themes.dart';
 import 'package:arrownova/game/puzzle.dart';
 
 void main() {
-  testWidgets('capture Classic levels 1–10 and an Animal Rescue sample', (
-    tester,
-  ) async {
+  testWidgets('capture Classic and Animal Rescue levels 1–10', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -26,7 +24,14 @@ void main() {
         level,
       );
     }
-    await _capture(tester, 'animal-rescue-01.png', 1, rescue: true);
+    for (var level = 1; level <= 10; level++) {
+      await _capture(
+        tester,
+        'animal-rescue-${level.toString().padLeft(2, '0')}.png',
+        level,
+        rescue: true,
+      );
+    }
   });
 }
 
