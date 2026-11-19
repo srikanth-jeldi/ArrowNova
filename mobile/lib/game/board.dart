@@ -43,6 +43,9 @@ class ArrowBoard extends StatelessWidget {
     builder: (context, box) {
       final size = Size(box.maxWidth, box.maxHeight);
       final geometry = BoardGeometry(game.puzzle, size);
+      final rescuePlacement = rescueAnimal == null
+          ? null
+          : geometry.rescuePlacement;
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapUp: (event) =>
@@ -63,8 +66,13 @@ class ArrowBoard extends StatelessWidget {
               ),
             ),
             if (rescueAnimal != null &&
-                game.removed.length < game.puzzle.arrows.length)
-              Positioned.fill(
+                game.removed.length < game.puzzle.arrows.length &&
+                rescuePlacement != null)
+              Positioned(
+                left: rescuePlacement.center.dx - rescuePlacement.radius,
+                top: rescuePlacement.center.dy - rescuePlacement.radius,
+                width: rescuePlacement.radius * 2,
+                height: rescuePlacement.radius * 2,
                 child: IgnorePointer(
                   child: CustomPaint(
                     painter: RescueCagePainter(),
@@ -72,21 +80,19 @@ class ArrowBoard extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            rescueAnimal!,
-                            style: const TextStyle(
-                              fontSize: 34,
-                              shadows: [
-                                Shadow(
-                                  color: Color(0x553B4A3C),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 3),
-                                ),
-                              ],
+                          if (rescueAnimal == '🦜')
+                            const CustomPaint(
+                              size: Size(44, 48),
+                              painter: RescueParrotPainter(),
+                            )
+                          else
+                            Text(
+                              rescueAnimal!,
+                              style: const TextStyle(fontSize: 34),
                             ),
-                          ),
+                          const SizedBox(height: 2),
                           const Text(
-                            'HELP ME, PLEASE!',
+                            'HELP!',
                             style: TextStyle(
                               color: Color(0xFF9B483E),
                               fontSize: 8,
@@ -137,7 +143,7 @@ class RescueCagePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final half = min(36.0, min(size.width, size.height) * .16);
+    final half = min(36.0, min(size.width, size.height) * .42);
     final color = const Color(0xFFDF6859).withValues(alpha: .82);
     final paint = Paint()
       ..color = color
@@ -191,6 +197,93 @@ class RescueCagePainter extends CustomPainter {
   bool shouldRepaint(covariant RescueCagePainter oldDelegate) => false;
 }
 
+class RescueParrotPainter extends CustomPainter {
+  const RescueParrotPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / 38, sy = size.height / 42;
+    canvas.save();
+    canvas.scale(sx, sy);
+    final shadow = Paint()..color = const Color(0x33152535);
+    canvas.drawOval(const Rect.fromLTWH(8, 36, 23, 4), shadow);
+
+    final tail = Paint()..color = const Color(0xFF20A79A);
+    canvas.drawPath(
+      Path()
+        ..moveTo(11, 27)
+        ..quadraticBezierTo(3, 30, 3, 39)
+        ..quadraticBezierTo(10, 37, 16, 32)
+        ..close(),
+      tail,
+    );
+    final body = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFFFFD65F), Color(0xFFFFA928)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(const Rect.fromLTWH(10, 13, 22, 24));
+    canvas.drawOval(const Rect.fromLTWH(10, 14, 21, 23), body);
+
+    final wing = Paint()..color = const Color(0xFF35AA63);
+    canvas.drawPath(
+      Path()
+        ..moveTo(13, 19)
+        ..quadraticBezierTo(4, 21, 7, 31)
+        ..quadraticBezierTo(10, 35, 18, 31)
+        ..lineTo(23, 24)
+        ..close(),
+      wing,
+    );
+    final wingMark = Paint()..color = const Color(0xFF19A9D0);
+    canvas.drawPath(
+      Path()
+        ..moveTo(10, 25)
+        ..quadraticBezierTo(13, 22, 17, 24)
+        ..quadraticBezierTo(15, 29, 10, 31)
+        ..close(),
+      wingMark,
+    );
+
+    final head = Paint()..color = const Color(0xFF45B66B);
+    canvas.drawCircle(const Offset(22, 12), 9, head);
+    final face = Paint()..color = const Color(0xFFFFD65F);
+    canvas.drawOval(const Rect.fromLTWH(22, 12, 9, 11), face);
+    canvas.drawCircle(const Offset(24, 10), 4.1, Paint()..color = Colors.white);
+    canvas.drawCircle(
+      const Offset(25.2, 10.5),
+      2.2,
+      Paint()..color = const Color(0xFF172C3E),
+    );
+    canvas.drawCircle(
+      const Offset(25.8, 9.8),
+      .7,
+      Paint()..color = Colors.white,
+    );
+    final beak = Paint()..color = const Color(0xFFFF7137);
+    canvas.drawPath(
+      Path()
+        ..moveTo(30, 14)
+        ..lineTo(37, 17)
+        ..lineTo(30, 20)
+        ..close(),
+      beak,
+    );
+    final feet = Paint()
+      ..color = const Color(0xFFDF713D)
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(const Offset(20, 34), const Offset(19, 39), feet);
+    canvas.drawLine(const Offset(19, 39), const Offset(15, 39), feet);
+    canvas.drawLine(const Offset(26, 34), const Offset(27, 39), feet);
+    canvas.drawLine(const Offset(27, 39), const Offset(31, 39), feet);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant RescueParrotPainter oldDelegate) => false;
+}
+
 class BoardGeometry {
   BoardGeometry(this.puzzle, this.size)
     : step = min(
@@ -204,6 +297,43 @@ class BoardGeometry {
     (size.width - (puzzle.width - 1) * step) / 2 + c.x * step,
     (size.height - (puzzle.height - 1) * step) / 2 + c.y * step,
   );
+
+  RescuePlacement? get rescuePlacement {
+    final occupied = <Cell>{
+      for (final arrow in puzzle.arrows)
+        for (final cell in arrow.cells) cell,
+    };
+    final centerX = (puzzle.width - 1) / 2;
+    final centerY = (puzzle.height - 1) / 2;
+    for (final radius in [2, 1, 0]) {
+      Cell? best;
+      var bestDistance = double.infinity;
+      for (var y = radius; y < puzzle.height - radius; y++) {
+        for (var x = radius; x < puzzle.width - radius; x++) {
+          var clear = true;
+          for (var dy = -radius; dy <= radius && clear; dy++) {
+            for (var dx = -radius; dx <= radius; dx++) {
+              if (occupied.contains(Cell(x + dx, y + dy))) {
+                clear = false;
+                break;
+              }
+            }
+          }
+          if (!clear) continue;
+          final distance =
+              pow(x - centerX, 2).toDouble() + pow(y - centerY, 2).toDouble();
+          if (distance < bestDistance) {
+            best = Cell(x, y);
+            bestDistance = distance;
+          }
+        }
+      }
+      if (best != null) {
+        return RescuePlacement(point(best), min(36, step * (radius + .4)));
+      }
+    }
+    return null;
+  }
 
   int? hit(Offset position, Set<int> removed) {
     // A forgiving halo around the rendered path. Nearest geometry wins even
@@ -249,6 +379,12 @@ class BoardGeometry {
     }
     return selected;
   }
+}
+
+class RescuePlacement {
+  const RescuePlacement(this.center, this.radius);
+  final Offset center;
+  final double radius;
 }
 
 class ArrowPainter extends CustomPainter {

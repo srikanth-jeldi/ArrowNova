@@ -174,15 +174,24 @@ class LevelCatalog {
         ? 4
         : 5;
     final rows = (count / chain).ceil();
-    final width = chain * 8 + 2;
-    final height = rows * 4 + 2;
+    // Animal rescues keep a deliberate empty pocket near the centre so the
+    // trapped animal is visibly framed by arrows instead of hidden beneath a
+    // path. Normal Classic/Endless lane layouts remain compact.
+    const rescueGap = 6;
+    final width = chain * 8 + 2 + (rescue ? rescueGap : 0);
+    final height = rows * 4 + 2 + (rescue ? rescueGap : 0);
     final paths = <ArrowPath>[];
     for (var row = 0; row < rows; row++) {
       final left = random.nextBool();
       final inRow = min(chain, count - paths.length);
-      final y = 1 + row * 4;
+      final y =
+          1 + row * 4 + (rescue && row >= (rows + 1) ~/ 2 ? rescueGap : 0);
       for (var col = 0; col < inRow; col++) {
-        final x = 1 + col * 8 + random.nextInt(2);
+        final x =
+            1 +
+            col * 8 +
+            (rescue && col >= (chain + 1) ~/ 2 ? rescueGap : 0) +
+            random.nextInt(2);
         final length = 3 + random.nextInt(level <= 10 ? 2 : 3);
         final cells = <Cell>[
           if (random.nextBool()) Cell(x, y + 1),
