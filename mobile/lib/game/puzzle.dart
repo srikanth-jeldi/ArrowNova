@@ -171,6 +171,31 @@ class LevelCatalog {
         : endless
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
+    if (rescue && level == 2) {
+      // Reuse the real Classic 10 circuit board for Rescue 2. The animal's
+      // cage occupies its central pocket, while the surrounding arrows and
+      // their blocker relationships stay recognizable from Classic 10.
+      final classicTen = get(10);
+      final paths = <ArrowPath>[];
+      for (final arrow in classicTen.arrows) {
+        if (arrow.id == 2 || arrow.id == 3 || arrow.id == 4) continue;
+        paths.add(ArrowPath(paths.length, arrow.cells));
+      }
+      final cageStart = paths.length;
+      paths.addAll([
+        ArrowPath(cageStart, [for (var x = 8; x <= 11; x++) Cell(x, 7)]),
+        ArrowPath(cageStart + 1, [Cell(11, 8), Cell(11, 9)]),
+        ArrowPath(cageStart + 2, [Cell(7, 9), Cell(8, 9), Cell(9, 9), Cell(10, 9)]),
+        ArrowPath(cageStart + 3, [Cell(7, 9), Cell(7, 8), Cell(7, 7)]),
+      ]);
+      return Puzzle(
+        level,
+        classicTen.width,
+        classicTen.height,
+        paths,
+        rescueCageIds: {cageStart, cageStart + 1, cageStart + 2, cageStart + 3},
+      );
+    }
     if (rescue && level <= 10) {
       // Start at Classic level-10 circuit difficulty, with the animal
       // enclosed by bent arrows on every side from the first mission.
