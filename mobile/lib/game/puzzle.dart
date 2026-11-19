@@ -23,10 +23,16 @@ class ArrowPath {
 }
 
 class Puzzle {
-  Puzzle(this.level, this.width, this.height, List<ArrowPath> arrows)
-    : arrows = List.unmodifiable(arrows);
+  Puzzle(
+    this.level,
+    this.width,
+    this.height,
+    List<ArrowPath> arrows, {
+    this.rescueCageIds = const {},
+  }) : arrows = List.unmodifiable(arrows);
   final int level, width, height;
   final List<ArrowPath> arrows;
+  final Set<int> rescueCageIds;
   bool contains(Cell c) => c.x >= 0 && c.y >= 0 && c.x < width && c.y < height;
 
   // Geometry is immutable. Cache blockers once instead of rebuilding every
@@ -173,17 +179,18 @@ class LevelCatalog {
         : level <= 20
         ? 4
         : 5;
-    final rows = (count / chain).ceil();
+    final fillerCount = rescue ? count - 6 : count;
+    final rows = max(1, (fillerCount / chain).ceil());
     // Animal rescues keep a deliberate empty pocket near the centre so the
     // trapped animal is visibly framed by arrows instead of hidden beneath a
     // path. Normal Classic/Endless lane layouts remain compact.
-    const rescueGap = 6;
+    const rescueGap = 12;
     final width = chain * 8 + 2 + (rescue ? rescueGap : 0);
     final height = rows * 4 + 2 + (rescue ? rescueGap : 0);
     final paths = <ArrowPath>[];
     for (var row = 0; row < rows; row++) {
       final left = random.nextBool();
-      final inRow = min(chain, count - paths.length);
+      final inRow = min(chain, fillerCount - paths.length);
       final y =
           1 + row * 4 + (rescue && row >= (rows + 1) ~/ 2 ? rescueGap : 0);
       for (var col = 0; col < inRow; col++) {
@@ -206,16 +213,45 @@ class LevelCatalog {
       }
     }
     // Use portrait geometry so the paths remain readable on a phone.
-    if (width > height) {
-      return Puzzle(level, height, width, [
-        for (final path in paths)
-          ArrowPath(
-            path.id,
-            path.cells.map((c) => Cell(c.y, width - 1 - c.x)).toList(),
-          ),
-      ]);
-    }
-    return Puzzle(level, width, height, paths);
+    final portrait = width > height;
+    final boardWidth = portrait ? height : width;
+    final boardHeight = portrait ? width : height;
+    final orientedPaths = portrait
+        ? [
+            for (final path in paths)
+              ArrowPath(
+                path.id,
+                path.cells.map((c) => Cell(c.y, width - 1 - c.x)).toList(),
+              ),
+          ]
+        : paths;
+    if (!rescue) return Puzzle(level, boardWidth, boardHeight, orientedPaths);
+
+    // Four of the playable paths form the animal's cage. Two outside arrows
+    // block exits from its top and right sides, so the player must clear those
+    // blockers before opening the cage. The remaining paths stay outside the
+    // central pocket reserved above.
+    final centerX = boardWidth ~/ 2;
+    final centerY = boardHeight ~/ 2;
+    final cage = <List<Cell>>[
+      [for (var x = centerX - 4; x <= centerX + 1; x++) Cell(x, centerY - 3)],
+      [for (var y = centerY - 2; y <= centerY + 1; y++) Cell(centerX + 2, y)],
+      [for (var x = centerX + 1; x >= centerX - 2; x--) Cell(x, centerY + 3)],
+      [for (var y = centerY + 2; y >= centerY - 1; y--) Cell(centerX - 4, y)],
+      [Cell(centerX + 2, centerY - 3), Cell(centerX + 3, centerY - 3)],
+      [Cell(centerX + 2, centerY + 2), Cell(centerX + 2, centerY + 3)],
+    ];
+    final allPaths = [...cage, for (final path in orientedPaths) path.cells];
+    return Puzzle(
+      level,
+      boardWidth,
+      boardHeight,
+      [
+        for (var id = 0; id < allPaths.length; id++)
+          ArrowPath(id, allPaths[id]),
+      ],
+      rescueCageIds: const {0, 1, 2, 3},
+    );
   }
 
   // Disjoint bent tiles create short acyclic removal chains.

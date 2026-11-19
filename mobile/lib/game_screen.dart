@@ -969,6 +969,8 @@ class _GameScreenState extends State<GameScreen>
                                             ? 'Path blocked · one heart lost'
                                             : game.hinted != null
                                             ? 'Follow the golden arrow'
+                                            : widget.rescue
+                                            ? 'Help me, please! Clear the arrows around me.'
                                             : 'Tap a clear path  ·  Pinch to zoom',
                                         key: ValueKey(busy && blocked),
                                         style: TextStyle(

@@ -74,35 +74,16 @@ class ArrowBoard extends StatelessWidget {
                 width: rescuePlacement.radius * 2,
                 height: rescuePlacement.radius * 2,
                 child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: RescueCagePainter(),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (rescueAnimal == '🦜')
-                            const CustomPaint(
-                              size: Size(44, 48),
-                              painter: RescueParrotPainter(),
-                            )
-                          else
-                            Text(
-                              rescueAnimal!,
-                              style: const TextStyle(fontSize: 34),
-                            ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'HELP!',
-                            style: TextStyle(
-                              color: Color(0xFF9B483E),
-                              fontSize: 8,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.1,
-                            ),
+                  child: Center(
+                    child: rescueAnimal == '🦜'
+                        ? const CustomPaint(
+                            size: Size(44, 48),
+                            painter: RescueParrotPainter(),
+                          )
+                        : Text(
+                            rescueAnimal!,
+                            style: const TextStyle(fontSize: 34),
                           ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
               ),
@@ -299,40 +280,8 @@ class BoardGeometry {
   );
 
   RescuePlacement? get rescuePlacement {
-    final occupied = <Cell>{
-      for (final arrow in puzzle.arrows)
-        for (final cell in arrow.cells) cell,
-    };
-    final centerX = (puzzle.width - 1) / 2;
-    final centerY = (puzzle.height - 1) / 2;
-    for (final radius in [2, 1, 0]) {
-      Cell? best;
-      var bestDistance = double.infinity;
-      for (var y = radius; y < puzzle.height - radius; y++) {
-        for (var x = radius; x < puzzle.width - radius; x++) {
-          var clear = true;
-          for (var dy = -radius; dy <= radius && clear; dy++) {
-            for (var dx = -radius; dx <= radius; dx++) {
-              if (occupied.contains(Cell(x + dx, y + dy))) {
-                clear = false;
-                break;
-              }
-            }
-          }
-          if (!clear) continue;
-          final distance =
-              pow(x - centerX, 2).toDouble() + pow(y - centerY, 2).toDouble();
-          if (distance < bestDistance) {
-            best = Cell(x, y);
-            bestDistance = distance;
-          }
-        }
-      }
-      if (best != null) {
-        return RescuePlacement(point(best), min(36, step * (radius + .4)));
-      }
-    }
-    return null;
+    final center = Cell(puzzle.width ~/ 2, puzzle.height ~/ 2);
+    return RescuePlacement(point(center), min(24, max(20, step * 1.4)));
   }
 
   int? hit(Offset position, Set<int> removed) {
@@ -525,17 +474,22 @@ class ArrowPainter extends CustomPainter {
         );
       }
       final hint = game.hinted == arrow.id;
+      final rescueCage = game.puzzle.rescueCageIds.contains(arrow.id);
       final width = geometry.step * .18;
       final depth = (geometry.step * .07).clamp(.5, 1.4);
       final dark = isError
           ? const Color(0xFF972437)
           : hint
           ? const Color(0xFF916114)
+          : rescueCage
+          ? const Color(0xFF9C3F43)
           : theme.dark;
       final light = isError
           ? const Color(0xFFFF8588)
           : hint
           ? const Color(0xFFFFE3A0)
+          : rescueCage
+          ? const Color(0xFFFFB39C)
           : theme.light;
       final stroke = Paint()
         ..style = PaintingStyle.stroke
@@ -568,6 +522,8 @@ class ArrowPainter extends CustomPainter {
                   ? const Color(0xFFE63950)
                   : hint
                   ? const Color(0xFFE0AE42)
+                  : rescueCage
+                  ? const Color(0xFFF18B70)
                   : theme.body,
               dark,
             ],
@@ -607,11 +563,15 @@ class ArrowPainter extends CustomPainter {
           ? const Color(0xFFE63950)
           : hint
           ? const Color(0xFFFFC84A)
+          : rescueCage
+          ? const Color(0xFFE87962)
           : theme.body;
       final headOutline = isError
           ? const Color(0xFF78172A)
           : hint
           ? const Color(0xFF76520A)
+          : rescueCage
+          ? const Color(0xFF8E2F35)
           : theme.dark;
       canvas.drawShadow(triangle, const Color(0x50062C51), depth, false);
       canvas.drawPath(
