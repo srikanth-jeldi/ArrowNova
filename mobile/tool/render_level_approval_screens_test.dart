@@ -36,12 +36,11 @@ void main() {
         rescue: true,
       );
     }
-    final classicHard = LevelCatalog.get(20);
     final rescueOne = RescueCatalog.get(1);
     final rescueTwo = RescueCatalog.get(2);
-    expect(rescueOne.arrows.length, classicHard.arrows.length);
+    expect(rescueOne.arrows.length, greaterThanOrEqualTo(50));
     expect(rescueOne.rescueCageIds.length, 4);
-    expect(rescueTwo.arrows.length, classicHard.arrows.length);
+    expect(rescueTwo.arrows.length, rescueOne.arrows.length);
     expect(rescueTwo.rescueCageIds.length, 4);
     final occupiedOutsideCage = <Cell>{
       for (final arrow in rescueTwo.arrows)
@@ -52,15 +51,13 @@ void main() {
     )) {
       expect(arrow.cells.toSet().intersection(occupiedOutsideCage), isEmpty);
     }
-    expect(
-      occupiedOutsideCage.intersection({
-        const Cell(8, 9),
-        const Cell(9, 9),
-        const Cell(8, 10),
-        const Cell(9, 10),
-      }),
-      isEmpty,
-    );
+    final centerX = rescueTwo.width ~/ 2;
+    final centerY = rescueTwo.height ~/ 2;
+    final animalPocket = {
+      for (var y = centerY - 2; y <= centerY + 2; y++)
+        for (var x = centerX - 3; x <= centerX + 1; x++) Cell(x, y),
+    };
+    expect(occupiedOutsideCage.intersection(animalPocket), isEmpty);
   });
 }
 

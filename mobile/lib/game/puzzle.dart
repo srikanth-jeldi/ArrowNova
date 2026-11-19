@@ -172,36 +172,31 @@ class LevelCatalog {
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
     if (rescue && level <= 2) {
-      // Rescue starts with a dense Classic 20 hard layout around the animal.
-      // Replace only four paths that cross the centre with a visible cage, leaving an
-      // open pocket for the animal rather than drawing it over arrows.
-      final classicHard = get(20);
+      // Rescue starts from a packed Classic 200 hard layout. Clear a
+      // generous central pocket so the animal and its cage remain unobscured.
+      final classicHard = get(200);
+      final centerX = classicHard.width ~/ 2;
+      final centerY = classicHard.height ~/ 2;
+      final protected = {
+        for (var y = centerY - 4; y <= centerY + 4; y++)
+          for (var x = centerX - 5; x <= centerX + 4; x++) Cell(x, y),
+      };
+      final cage = <List<Cell>>[
+        [for (var x = centerX - 4; x <= centerX + 1; x++) Cell(x, centerY - 3)],
+        [for (var y = centerY - 2; y <= centerY + 1; y++) Cell(centerX + 2, y)],
+        [for (var x = centerX + 1; x >= centerX - 2; x--) Cell(x, centerY + 3)],
+        [for (var y = centerY + 2; y >= centerY - 1; y--) Cell(centerX - 4, y)],
+        [Cell(centerX + 2, centerY - 3), Cell(centerX + 3, centerY - 3)],
+        [Cell(centerX + 2, centerY + 2), Cell(centerX + 2, centerY + 3)],
+      ];
       final paths = <ArrowPath>[];
       for (final arrow in classicHard.arrows) {
-        if (arrow.id == 1 ||
-            arrow.id == 6 ||
-            arrow.id == 13 ||
-            arrow.id == 19) {
-          continue;
-        }
+        if (arrow.cells.any(protected.contains)) continue;
         paths.add(ArrowPath(paths.length, arrow.cells));
       }
       final cageStart = paths.length;
       paths.addAll([
-        ArrowPath(cageStart, [Cell(8, 8), Cell(9, 8)]),
-        ArrowPath(cageStart + 1, [
-          Cell(10, 8),
-          Cell(10, 9),
-          Cell(10, 10),
-          Cell(10, 11),
-        ]),
-        ArrowPath(cageStart + 2, [Cell(8, 11), Cell(9, 11)]),
-        ArrowPath(cageStart + 3, [
-          Cell(7, 11),
-          Cell(7, 10),
-          Cell(7, 9),
-          Cell(7, 8),
-        ]),
+        for (var i = 0; i < 4; i++) ArrowPath(cageStart + i, cage[i]),
       ]);
       return Puzzle(
         level,
