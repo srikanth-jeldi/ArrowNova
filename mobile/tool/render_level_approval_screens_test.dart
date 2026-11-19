@@ -24,6 +24,7 @@ void main() {
         level,
       );
     }
+    await _capture(tester, 'classic-20-hard.png', 20);
     await _capture(tester, 'classic-blocked-edges.png', 6, blockedDemo: true);
     for (var level = 1; level <= 10; level++) {
       final puzzle = RescueCatalog.get(level);
@@ -35,16 +36,18 @@ void main() {
         rescue: true,
       );
     }
-    final classicTen = LevelCatalog.get(10);
+    final classicHard = LevelCatalog.get(20);
     final rescueTwo = RescueCatalog.get(2);
-    expect(rescueTwo.arrows.length, greaterThan(classicTen.arrows.length));
+    expect(rescueTwo.arrows.length, greaterThan(classicHard.arrows.length));
     expect(
       rescueTwo.dependencyDepth,
-      greaterThan(classicTen.dependencyDepth),
+      greaterThan(classicHard.dependencyDepth),
     );
     expect(
       rescueTwo.arrows.where((arrow) => rescueTwo.canExit(arrow.id, {})).length,
-      lessThan((rescueTwo.arrows.length + 1) ~/ 2),
+      lessThanOrEqualTo(
+        classicHard.arrows.where((arrow) => classicHard.canExit(arrow.id, {})).length,
+      ),
     );
   });
 }

@@ -172,37 +172,34 @@ class LevelCatalog {
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
     if (rescue && level == 2) {
-      // Reuse the real Classic 10 circuit board for Rescue 2. The animal's
-      // cage occupies its central pocket, while the surrounding arrows and
-      // their blocker relationships stay recognizable from Classic 10.
-      final classicTen = get(10);
+      // Reuse the real Classic 20 hard board for Rescue 2. Replace the
+      // central crossing arrows with a cage, preserving the surrounding
+      // hard-puzzle layout and its blocker relationships.
+      final classicHard = get(20);
       final paths = <ArrowPath>[];
-      for (final arrow in classicTen.arrows) {
-        if (arrow.id == 2 || arrow.id == 3 || arrow.id == 4) continue;
+      for (final arrow in classicHard.arrows) {
+        if (arrow.id == 1 || arrow.id == 6 || arrow.id == 13 || arrow.id == 19) {
+          continue;
+        }
         paths.add(ArrowPath(paths.length, arrow.cells));
       }
-      // Add two chained blockers to the short clear path and three to the
-      // lower circuit so Rescue 2 is deliberately tougher than Classic 10.
-      paths.add(ArrowPath(paths.length, [Cell(10, 13), Cell(11, 13)]));
-      paths.add(
-        ArrowPath(paths.length, [Cell(12, 12), Cell(12, 13), Cell(13, 13)]),
-      );
-      paths.add(ArrowPath(paths.length, [Cell(8, 16), Cell(9, 16)]));
-      paths.add(
-        ArrowPath(paths.length, [Cell(10, 15), Cell(10, 16), Cell(11, 16)]),
-      );
-      paths.add(ArrowPath(paths.length, [Cell(12, 16), Cell(13, 16)]));
       final cageStart = paths.length;
       paths.addAll([
-        ArrowPath(cageStart, [for (var x = 8; x <= 11; x++) Cell(x, 7)]),
-        ArrowPath(cageStart + 1, [Cell(11, 8), Cell(11, 9)]),
-        ArrowPath(cageStart + 2, [Cell(7, 9), Cell(8, 9), Cell(9, 9), Cell(10, 9)]),
-        ArrowPath(cageStart + 3, [Cell(7, 9), Cell(7, 8), Cell(7, 7)]),
+        ArrowPath(cageStart, [Cell(8, 8), Cell(9, 8), Cell(10, 8)]),
+        ArrowPath(cageStart + 1, [Cell(11, 8), Cell(11, 9), Cell(11, 10), Cell(11, 11)]),
+        ArrowPath(cageStart + 2, [Cell(8, 11), Cell(9, 11), Cell(10, 11)]),
+        ArrowPath(cageStart + 3, [Cell(7, 11), Cell(7, 10), Cell(7, 9), Cell(7, 8)]),
       ]);
+      // One nested exit shaft blocks the long west-pointing routes, with a
+      // second arrow protecting its own exit to add a deeper solve chain.
+      paths.add(
+        ArrowPath(paths.length, [for (var y = 15; y >= 9; y--) Cell(0, y)]),
+      );
+      paths.add(ArrowPath(paths.length, [Cell(0, 8), Cell(0, 7)]));
       return Puzzle(
         level,
-        classicTen.width,
-        classicTen.height,
+        classicHard.width,
+        classicHard.height,
         paths,
         rescueCageIds: {cageStart, cageStart + 1, cageStart + 2, cageStart + 3},
       );
