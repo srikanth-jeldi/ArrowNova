@@ -17,6 +17,7 @@ class ArrowBoard extends StatelessWidget {
     this.progress = 0,
     this.showGuide = false,
     this.celebration = 0,
+    this.rescueAnimal,
     this.theme = const BoardTheme(
       'crystal',
       'Crystal blue',
@@ -34,6 +35,7 @@ class ArrowBoard extends StatelessWidget {
   final double progress;
   final bool showGuide;
   final double celebration;
+  final String? rescueAnimal;
   final BoardTheme theme;
 
   @override
@@ -60,6 +62,44 @@ class ArrowBoard extends StatelessWidget {
                 onTap: onTap,
               ),
             ),
+            if (rescueAnimal != null &&
+                game.removed.length < game.puzzle.arrows.length)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: RescueCagePainter(),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            rescueAnimal!,
+                            style: const TextStyle(
+                              fontSize: 34,
+                              shadows: [
+                                Shadow(
+                                  color: Color(0x553B4A3C),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Text(
+                            'HELP ME, PLEASE!',
+                            style: TextStyle(
+                              color: Color(0xFF9B483E),
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             if (celebration > 0)
               Positioned.fill(
                 child: IgnorePointer(
@@ -91,6 +131,64 @@ class ArrowBoard extends StatelessWidget {
       );
     },
   );
+}
+
+class RescueCagePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final half = min(36.0, min(size.width, size.height) * .16);
+    final color = const Color(0xFFDF6859).withValues(alpha: .82);
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.8
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    final paths = <Path>[
+      Path()
+        ..moveTo(center.dx - half, center.dy - half)
+        ..lineTo(center.dx + half, center.dy - half + 7),
+      Path()
+        ..moveTo(center.dx + half, center.dy - half)
+        ..lineTo(center.dx + half, center.dy + half),
+      Path()
+        ..moveTo(center.dx + half, center.dy + half)
+        ..lineTo(center.dx - half, center.dy + half - 7),
+      Path()
+        ..moveTo(center.dx - half, center.dy + half)
+        ..lineTo(center.dx - half, center.dy - half),
+    ];
+    for (var i = 0; i < paths.length; i++) {
+      canvas.drawPath(paths[i], paint);
+      final starts = [
+        Offset(center.dx - half, center.dy - half),
+        Offset(center.dx + half, center.dy - half),
+        Offset(center.dx + half, center.dy + half),
+        Offset(center.dx - half, center.dy + half),
+      ];
+      final ends = [
+        Offset(center.dx + half, center.dy - half + 7),
+        Offset(center.dx + half, center.dy + half),
+        Offset(center.dx - half, center.dy + half - 7),
+        Offset(center.dx - half, center.dy - half),
+      ];
+      final vector = (ends[i] - starts[i]);
+      final direction = vector / vector.distance;
+      final normal = Offset(-direction.dy, direction.dx);
+      final tip = ends[i];
+      final base = tip - direction * 8;
+      final arrowhead = Path()
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo((base + normal * 4).dx, (base + normal * 4).dy)
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo((base - normal * 4).dx, (base - normal * 4).dy);
+      canvas.drawPath(arrowhead, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant RescueCagePainter oldDelegate) => false;
 }
 
 class BoardGeometry {

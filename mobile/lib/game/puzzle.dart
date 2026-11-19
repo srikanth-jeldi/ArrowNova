@@ -113,6 +113,10 @@ class LevelCatalog {
     if (level <= 30 &&
         run != null &&
         run['layout'] != GameSession(current).layoutKey) {
+      final previousCircuit = _circuit(level);
+      if (run['layout'] == GameSession(previousCircuit).layoutKey) {
+        return previousCircuit;
+      }
       final lanes = _gentle(level, endless: false);
       if (run['layout'] == GameSession(lanes).layoutKey) return lanes;
       final previous = get(level, legacy: true);
@@ -262,12 +266,16 @@ class LevelCatalog {
     bool rescue = false,
   }) {
     if (rescue) return _gentle(level, endless: true, rescue: true);
-    if (endless || (level <= 30 && !legacy)) {
-      return endless ? _gentle(level, endless: true) : _circuit(level);
-    }
+    if (endless) return _gentle(level, endless: true);
+    // Keep the first five rounds as small, readable tutorials. From round 6
+    // onward, switch to compact silhouette boards with bends and real blockers.
+    if (level <= 5 && !legacy) return _circuit(level);
+    final earlyCircuit = level <= 30 && !legacy;
     final hard = level % 10 == 0;
     final random = Random(7429 + level * 101);
-    final target = 30 + (level.clamp(1, 800) - 1) * 170 ~/ 799;
+    final target = earlyCircuit
+        ? arrowCount(level)
+        : 30 + (level.clamp(1, 800) - 1) * 170 ~/ 799;
     final fill = (level - 1) % 4 == 1 ? .52 : .78;
     final width = sqrt(target * 10 / (fill * 1.2)).ceil();
     final height = (width * 1.2).round();
@@ -395,16 +403,20 @@ class LevelCatalog {
       final coverage =
           arrows.fold<int>(0, (sum, a) => sum + a.cells.length) / mask.length;
       final short = arrows.where((a) => a.cells.length <= 4).length;
-      final long = arrows.where((a) => a.cells.length >= 18).length;
+      final longThreshold = earlyCircuit ? max(8, (target * .5).ceil()) : 18;
+      final long = arrows.where((a) => a.cells.length >= longThreshold).length;
       final blocked =
           arrows.where((a) => !candidate.canExit(a.id, {})).length / target;
       final depth = candidate.dependencyDepth;
-      if (coverage < .80 ||
-          short < (target * .12).floor() ||
-          long < 2 ||
-          !arrows.any((a) => a.cells.length >= 24) ||
-          blocked < (hard ? .7 : .4) ||
-          (hard && depth < 8)) {
+      final minLongCount = earlyCircuit ? max(1, (target * .1).ceil()) : 2;
+      final minLongest = earlyCircuit ? max(10, (target * .5).ceil()) : 24;
+      final minBlocked = earlyCircuit ? .2 : (hard ? .7 : .4);
+      if (coverage < (earlyCircuit ? .68 : .80) ||
+          short < (target * (earlyCircuit ? .08 : .12)).floor() ||
+          long < minLongCount ||
+          !arrows.any((a) => a.cells.length >= minLongest) ||
+          blocked < minBlocked ||
+          (hard && depth < (earlyCircuit ? min(4, target ~/ 3) : 8))) {
         continue;
       }
       final score =
@@ -418,13 +430,16 @@ class LevelCatalog {
         bestScore = score;
       }
       if (coverage >= .87 &&
-          short >= target * .15 &&
-          long >= max(2, target * .08) &&
-          blocked >= (hard ? .75 : .4)) {
+          short >= target * (earlyCircuit ? .08 : .15) &&
+          long >= (earlyCircuit ? minLongCount : max(2, target * .08)) &&
+          blocked >= (earlyCircuit ? .2 : (hard ? .75 : .4))) {
         break;
       }
     }
-    if (best == null) throw StateError('Could not build level $level');
+    if (best == null) {
+      if (earlyCircuit) return _circuit(level);
+      throw StateError('Could not build level $level');
+    }
     return best;
   }
 }

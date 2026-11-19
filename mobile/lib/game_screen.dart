@@ -863,41 +863,6 @@ class _GameScreenState extends State<GameScreen>
                                       color: Color(0xFF647C8F),
                                     ),
                                   ),
-                                  if (widget.rescue)
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        18,
-                                        10,
-                                        18,
-                                        0,
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            RescueCatalog.animal(
-                                              game.puzzle.level,
-                                            ),
-                                            style: const TextStyle(
-                                              fontSize: 26,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 9),
-                                          const Flexible(
-                                            child: Text(
-                                              'Help me, please! Clear the arrows to set me free.',
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                color: Color(0xFF346E5E),
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(
                                       28,
@@ -975,6 +940,11 @@ class _GameScreenState extends State<GameScreen>
                                         child: ArrowBoard(
                                           theme: activeTheme,
                                           game: game,
+                                          rescueAnimal: widget.rescue
+                                              ? RescueCatalog.animal(
+                                                  game.puzzle.level,
+                                                )
+                                              : null,
                                           celebration: celebrating
                                               ? animation.value
                                               : 0,
