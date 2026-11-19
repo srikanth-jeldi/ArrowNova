@@ -26,8 +26,10 @@ void main() {
     }
     await _capture(tester, 'classic-20-hard.png', 20);
     await _capture(tester, 'classic-blocked-edges.png', 6, blockedDemo: true);
+    final rescueArrowCounts = <int>[];
     for (var level = 1; level <= 10; level++) {
       final puzzle = RescueCatalog.get(level);
+      rescueArrowCounts.add(puzzle.arrows.length);
       expect(puzzle.solution().length, puzzle.arrows.length);
       await _capture(
         tester,
@@ -38,9 +40,26 @@ void main() {
     }
     final rescueOne = RescueCatalog.get(1);
     final rescueTwo = RescueCatalog.get(2);
-    expect(rescueOne.arrows.length, greaterThanOrEqualTo(50));
+    expect(rescueOne.width, 22);
+    expect(rescueOne.height, 32);
+    expect(rescueOne.arrows.length, 24);
     expect(rescueOne.rescueCageIds.length, 4);
-    expect(rescueTwo.arrows.length, rescueOne.arrows.length);
+    final rescueOneCells = rescueOne.arrows.expand((arrow) => arrow.cells).toList();
+    expect(rescueOneCells.toSet().length, rescueOneCells.length);
+    final rescueOneOutside = <Cell>{
+      for (final arrow in rescueOne.arrows)
+        if (!rescueOne.rescueCageIds.contains(arrow.id)) ...arrow.cells,
+    };
+    expect(
+      rescueOneOutside.intersection({
+        for (var y = 13; y <= 19; y++)
+          for (var x = 7; x <= 14; x++) Cell(x, y),
+      }),
+      isEmpty,
+    );
+    for (var i = 1; i < rescueArrowCounts.length; i++) {
+      expect(rescueArrowCounts[i], greaterThanOrEqualTo(rescueArrowCounts[i - 1]));
+    }
     expect(rescueTwo.rescueCageIds.length, 4);
     final occupiedOutsideCage = <Cell>{
       for (final arrow in rescueTwo.arrows)

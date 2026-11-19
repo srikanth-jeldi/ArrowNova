@@ -171,10 +171,13 @@ class LevelCatalog {
         : endless
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
-    if (rescue && level <= 2) {
-      // Rescue starts from a packed Classic 400 hard layout. Clear a
-      // generous central pocket so the animal and its cage remain unobscured.
-      final classicHard = get(400);
+    if (rescue && level == 1) return _rescueReferenceLayout(level);
+    if (rescue && level >= 2) {
+      // Let later Rescue missions grow from increasingly dense hard boards.
+      final sourceLevel = level <= 10
+          ? const [400, 480, 560, 640, 720, 800, 960, 1040, 1120][level - 2]
+          : min(LevelCatalog.count, 1120 + (level - 10) * 20);
+      final classicHard = get(sourceLevel);
       final centerX = classicHard.width ~/ 2;
       final centerY = classicHard.height ~/ 2;
       final protected = {
@@ -401,6 +404,100 @@ class LevelCatalog {
           ArrowPath(id, allPaths[id]),
       ],
       rescueCageIds: const {0, 1, 2, 3},
+    );
+  }
+
+  static Puzzle _rescueReferenceLayout(int level) {
+    const width = 22;
+    const height = 32;
+    final paths = <ArrowPath>[];
+
+    // Long, alternating multi-turn routes fill the top and bottom of the
+    // board. Their heads reach the outside edge, like the supplied reference.
+    for (var band = 0; band < 3; band++) {
+      final y = band * 3;
+      if (band.isEven) {
+        paths.add(
+          ArrowPath(paths.length, [
+            Cell(0, y),
+            for (var x = 1; x <= width - 2; x++) Cell(x, y),
+            Cell(width - 2, y + 1),
+            for (var x = width - 3; x >= 1; x--) Cell(x, y + 1),
+            Cell(1, y + 2),
+            for (var x = 2; x < width; x++) Cell(x, y + 2),
+          ]),
+        );
+      } else {
+        paths.add(
+          ArrowPath(paths.length, [
+            Cell(width - 1, y),
+            for (var x = width - 2; x >= 0; x--) Cell(x, y),
+            Cell(0, y + 1),
+            for (var x = 1; x <= width - 2; x++) Cell(x, y + 1),
+            Cell(width - 2, y + 2),
+            for (var x = width - 3; x >= 0; x--) Cell(x, y + 2),
+          ]),
+        );
+      }
+    }
+    paths.add(
+      ArrowPath(paths.length, [
+        for (var x = width - 1; x >= 0; x--) Cell(x, 9),
+      ]),
+    );
+    for (var band = 0; band < 3; band++) {
+      final y = 22 + band * 3;
+      if (band.isEven) {
+        paths.add(
+          ArrowPath(paths.length, [
+            Cell(0, y),
+            for (var x = 1; x <= width - 2; x++) Cell(x, y),
+            Cell(width - 2, y + 1),
+            for (var x = width - 3; x >= 1; x--) Cell(x, y + 1),
+            Cell(1, y + 2),
+            for (var x = 2; x < width; x++) Cell(x, y + 2),
+          ]),
+        );
+      } else {
+        paths.add(
+          ArrowPath(paths.length, [
+            Cell(width - 1, y),
+            for (var x = width - 2; x >= 0; x--) Cell(x, y),
+            Cell(0, y + 1),
+            for (var x = 1; x <= width - 2; x++) Cell(x, y + 1),
+            Cell(width - 2, y + 2),
+            for (var x = width - 3; x >= 0; x--) Cell(x, y + 2),
+          ]),
+        );
+      }
+    }
+    paths.add(
+      ArrowPath(paths.length, [for (var x = 0; x < width; x++) Cell(x, 31)]),
+    );
+
+    const sideColumns = [0, 2, 4, 17, 19, 21];
+    for (final x in sideColumns) {
+      paths.add(
+        ArrowPath(paths.length, [for (var y = 15; y >= 10; y--) Cell(x, y)]),
+      );
+      paths.add(
+        ArrowPath(paths.length, [for (var y = 16; y <= 21; y++) Cell(x, y)]),
+      );
+    }
+
+    final cageStart = paths.length;
+    paths.addAll([
+      ArrowPath(cageStart, [for (var x = 7; x <= 14; x++) Cell(x, 12)]),
+      ArrowPath(cageStart + 1, [for (var y = 12; y <= 20; y++) Cell(15, y)]),
+      ArrowPath(cageStart + 2, [for (var x = 14; x >= 7; x--) Cell(x, 20)]),
+      ArrowPath(cageStart + 3, [for (var y = 19; y >= 12; y--) Cell(6, y)]),
+    ]);
+    return Puzzle(
+      level,
+      width,
+      height,
+      paths,
+      rescueCageIds: {cageStart, cageStart + 1, cageStart + 2, cageStart + 3},
     );
   }
 
