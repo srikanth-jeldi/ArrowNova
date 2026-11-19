@@ -38,17 +38,8 @@ void main() {
     }
     final classicHard = LevelCatalog.get(20);
     final rescueTwo = RescueCatalog.get(2);
-    expect(rescueTwo.arrows.length, greaterThan(classicHard.arrows.length));
-    expect(
-      rescueTwo.dependencyDepth,
-      greaterThan(classicHard.dependencyDepth),
-    );
-    expect(
-      rescueTwo.arrows.where((arrow) => rescueTwo.canExit(arrow.id, {})).length,
-      lessThanOrEqualTo(
-        classicHard.arrows.where((arrow) => classicHard.canExit(arrow.id, {})).length,
-      ),
-    );
+    expect(GameSession(rescueTwo).layoutKey, GameSession(classicHard).layoutKey);
+    expect(rescueTwo.arrows.length, classicHard.arrows.length);
   });
 }
 

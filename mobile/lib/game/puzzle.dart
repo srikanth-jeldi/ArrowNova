@@ -172,36 +172,15 @@ class LevelCatalog {
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
     if (rescue && level == 2) {
-      // Reuse the real Classic 20 hard board for Rescue 2. Replace the
-      // central crossing arrows with a cage, preserving the surrounding
-      // hard-puzzle layout and its blocker relationships.
+      // Rescue 2 uses the exact Classic 20 hard arrow layout. The rescue
+      // animal is drawn over the board centre by ArrowBoard; do not move,
+      // remove, or add any arrows here.
       final classicHard = get(20);
-      final paths = <ArrowPath>[];
-      for (final arrow in classicHard.arrows) {
-        if (arrow.id == 1 || arrow.id == 6 || arrow.id == 13 || arrow.id == 19) {
-          continue;
-        }
-        paths.add(ArrowPath(paths.length, arrow.cells));
-      }
-      final cageStart = paths.length;
-      paths.addAll([
-        ArrowPath(cageStart, [Cell(8, 8), Cell(9, 8), Cell(10, 8)]),
-        ArrowPath(cageStart + 1, [Cell(11, 8), Cell(11, 9), Cell(11, 10), Cell(11, 11)]),
-        ArrowPath(cageStart + 2, [Cell(8, 11), Cell(9, 11), Cell(10, 11)]),
-        ArrowPath(cageStart + 3, [Cell(7, 11), Cell(7, 10), Cell(7, 9), Cell(7, 8)]),
-      ]);
-      // One nested exit shaft blocks the long west-pointing routes, with a
-      // second arrow protecting its own exit to add a deeper solve chain.
-      paths.add(
-        ArrowPath(paths.length, [for (var y = 15; y >= 9; y--) Cell(0, y)]),
-      );
-      paths.add(ArrowPath(paths.length, [Cell(0, 8), Cell(0, 7)]));
       return Puzzle(
         level,
         classicHard.width,
         classicHard.height,
-        paths,
-        rescueCageIds: {cageStart, cageStart + 1, cageStart + 2, cageStart + 3},
+        classicHard.arrows,
       );
     }
     if (rescue && level <= 10) {
