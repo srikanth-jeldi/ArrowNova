@@ -9,6 +9,7 @@ class VictoryScreen extends StatelessWidget {
     super.key,
     required this.level,
     this.dailyLabel,
+    this.dailyStreak,
     this.endless = false,
     this.rescueMode = false,
     this.rescueAnimal,
@@ -27,6 +28,7 @@ class VictoryScreen extends StatelessWidget {
   });
   final int level, stars, moves, totalCoins;
   final int streakBonus;
+  final int? dailyStreak;
   final bool allowReplay;
   final bool waitingForAd;
   final bool endless;
@@ -178,7 +180,9 @@ class VictoryScreen extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  firstCompletion
+                                  dailyStreak != null
+                                      ? '$dailyStreak-day streak · +$streakBonus bonus coins'
+                                      : firstCompletion
                                       ? (level % 50 == 0
                                             ? 'Garden milestone! +10 points saved'
                                             : '+10 garden points saved')
@@ -200,14 +204,16 @@ class VictoryScreen extends StatelessWidget {
                                           : 'Mission $level completed'
                                     : endless
                                     ? 'Next round'
+                                    : dailyStreak != null
+                                    ? 'Daily Challenge'
                                     : dailyLabel != null
                                     ? 'Back to home'
                                     : 'Next level',
                                 icon: Icons.chevron_right,
                                 onPressed: waitingForAd ? null : onNext,
                               ),
-                              const SizedBox(height: 12),
-                              Row(
+                              if (dailyStreak == null) const SizedBox(height: 12),
+                              if (dailyStreak == null) Row(
                                 children: [
                                   if (allowReplay)
                                     Expanded(
@@ -229,7 +235,9 @@ class VictoryScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 14),
                               Text(
-                                dailyLabel != null
+                                dailyStreak != null
+                                    ? 'Daily puzzles reset at midnight'
+                                    : dailyLabel != null
                                     ? 'DAILY $dailyLabel COMPLETE'
                                     : rescueMode
                                     ? rescueFinishedAll

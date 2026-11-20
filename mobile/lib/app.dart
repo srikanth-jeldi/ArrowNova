@@ -11,6 +11,7 @@ import 'theme_shop_screen.dart';
 import 'core/ads.dart';
 import 'core/music_service.dart';
 import 'daily_chest_screen.dart';
+import 'daily_challenge_screen.dart';
 import 'chapters_screen.dart';
 import 'core/chapter_gate.dart';
 
@@ -168,26 +169,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> openDaily() async {
     if (openingLevel) return;
     openingLevel = true;
-    final today = DateTime.now();
-    if (progress.dailyStars.containsKey(dayKey(today))) {
-      await showDialog<void>(
-        context: context,
-        builder: (dialog) => AlertDialog(
-          title: const Text('Today’s puzzle is complete!'),
-          content: Text(
-            'You earned ${progress.dailyStars[dayKey(today)]} stars.\n\nOne daily puzzle each day. Come back tomorrow for the next one (phone local time).\n\nYou can keep playing Classic levels today.',
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => DailyChallengeScreen(
+            progress: progress,
+            play: playDaily,
+            enableReminders: () async {
+              final allowed = widget.initialProgress != null ||
+                  await syncReminders(enabled: true, permission: true);
+              if (allowed && mounted) {
+                progress.dailyReminders = true;
+                save();
+              }
+              return allowed;
+            },
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialog),
-              child: const Text('Got it'),
-            ),
-          ],
         ),
       );
+    } finally {
       openingLevel = false;
-      return;
+      if (mounted) setState(() {});
     }
+  }
+
+  Future<void> playDaily(DateTime today) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => GameScreen(
@@ -205,8 +211,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
     );
-    openingLevel = false;
-    if (mounted) setState(() {});
   }
 
   Future<void> openHelp(String page) async {

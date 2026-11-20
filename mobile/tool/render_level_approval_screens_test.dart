@@ -26,10 +26,8 @@ void main() {
     }
     await _capture(tester, 'classic-20-hard.png', 20);
     await _capture(tester, 'classic-blocked-edges.png', 6, blockedDemo: true);
-    final rescueArrowCounts = <int>[];
     for (var level = 1; level <= 10; level++) {
       final puzzle = RescueCatalog.get(level);
-      rescueArrowCounts.add(puzzle.arrows.length);
       expect(puzzle.solution().length, puzzle.arrows.length);
       await _capture(
         tester,
@@ -40,9 +38,9 @@ void main() {
     }
     final rescueOne = RescueCatalog.get(1);
     final rescueTwo = RescueCatalog.get(2);
-    expect(rescueOne.width, 22);
-    expect(rescueOne.height, 32);
-    expect(rescueOne.arrows.length, 24);
+    expect(rescueOne.width, 24);
+    expect(rescueOne.height, 35);
+    expect(rescueOne.arrows.length, 60);
     expect(rescueOne.rescueCageIds.length, 4);
     final rescueOneCells = rescueOne.arrows.expand((arrow) => arrow.cells).toList();
     expect(rescueOneCells.toSet().length, rescueOneCells.length);
@@ -52,13 +50,19 @@ void main() {
     };
     expect(
       rescueOneOutside.intersection({
-        for (var y = 13; y <= 19; y++)
-          for (var x = 7; x <= 14; x++) Cell(x, y),
+        for (var y = 13; y <= 21; y++)
+          for (var x = 8; x <= 15; x++) Cell(x, y),
       }),
       isEmpty,
     );
-    for (var i = 1; i < rescueArrowCounts.length; i++) {
-      expect(rescueArrowCounts[i], greaterThanOrEqualTo(rescueArrowCounts[i - 1]));
+    final layouts = <String>{};
+    for (final level in [for (var i = 2; i <= 20; i++) i, 26, 38, 50, 62, 74, 200, 1000, 3000]) {
+      final puzzle = RescueCatalog.get(level);
+      final occupied = puzzle.arrows.expand((arrow) => arrow.cells).toList();
+      expect(puzzle.solution().length, puzzle.arrows.length, reason: 'Mission $level');
+      expect(occupied.toSet().length, occupied.length);
+      expect(occupied.length / (puzzle.width * puzzle.height), greaterThan(.80));
+      expect(layouts.add(GameSession(puzzle).layoutKey), isTrue);
     }
     expect(rescueTwo.rescueCageIds.length, 4);
     final occupiedOutsideCage = <Cell>{

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:arrownova/app.dart';
 import 'package:arrownova/core/progress_store.dart';
+import 'package:arrownova/daily_challenge_screen.dart';
 import 'package:arrownova/game/daily.dart';
 import 'package:arrownova/game_screen.dart';
 import 'package:arrownova/victory_screen.dart';
@@ -24,19 +25,22 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Daily challenge'));
         await tester.pumpAndSettle();
-        expect(
-          find.byType(GameScreen),
-          completedToday ? findsNothing : findsOneWidget,
-        );
+        expect(find.byType(DailyChallengeScreen), findsOneWidget);
+        expect(find.byType(GameScreen), findsNothing);
         if (completedToday) {
-          expect(find.text('Today’s puzzle is complete!'), findsOneWidget);
-          await tester.tap(find.text('Got it'));
+          expect(find.text('Today’s puzzle complete'), findsOneWidget);
+          expect(find.text('Play daily puzzle'), findsNothing);
+          await tester.pageBack();
           await tester.pumpAndSettle();
           await tester.tap(find.text('Daily challenge'));
           await tester.pumpAndSettle();
           expect(find.byType(GameScreen), findsNothing);
           expect(progress.dailyStars.length, 1);
           expect(progress.dailyStars[dayKey(now)], 3);
+        } else {
+          await tester.tap(find.text('Play daily puzzle'));
+          await tester.pumpAndSettle();
+          expect(find.byType(GameScreen), findsOneWidget);
         }
         expect(progress.coins, balance);
         expect(tester.takeException(), isNull);
@@ -54,6 +58,7 @@ void main() {
           firstCompletion: true,
           totalCoins: 60,
           dailyLabel: 'Today',
+          dailyStreak: 1,
           allowReplay: false,
           onNext: () {},
           onReplay: () {},
@@ -63,7 +68,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Replay'), findsNothing);
-    expect(find.text('Back to home'), findsOneWidget);
+    expect(find.text('Daily Challenge'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

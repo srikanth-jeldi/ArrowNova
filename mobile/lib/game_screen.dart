@@ -172,7 +172,10 @@ class _GameScreenState extends State<GameScreen>
       learning
           ? TrainingCatalog.get(1)
           : widget.rescue
-          ? RescueCatalog.get(widget.level)
+          ? RescueCatalog.resume(
+              widget.level,
+              widget.progress.runs['rescue/${widget.level}'],
+            )
           : widget.endless
           ? EndlessCatalog.get(widget.level)
           : widget.dailyDate != null
@@ -640,6 +643,7 @@ class _GameScreenState extends State<GameScreen>
       playTime.start();
     }
     if (game.won && !busy && !learning) {
+      final isDailyChallenge = widget.dailyDate != null && widget.chestIndex == null;
       return VictoryScreen(
         endless: widget.endless,
         rescueMode: widget.rescue,
@@ -659,6 +663,9 @@ class _GameScreenState extends State<GameScreen>
         elapsed: playTime.elapsed + Duration(milliseconds: restoredMs),
         firstCompletion: firstCompletion,
         totalCoins: widget.progress.coins,
+        dailyStreak: isDailyChallenge
+            ? widget.progress.dailyStreak(widget.dailyDate!)
+            : null,
         streakBonus:
             firstCompletion &&
                 widget.dailyDate != null &&
@@ -704,7 +711,9 @@ class _GameScreenState extends State<GameScreen>
                                     color: Color(0xFF5BBCF4),
                                   ),
                                 ),
-                                tooltip: 'Back to home',
+                                tooltip: widget.dailyDate != null && widget.chestIndex == null
+                                    ? 'Back to Daily Challenge'
+                                    : 'Back to home',
                                 onPressed: busy
                                     ? null
                                     : () => Navigator.pop(context),

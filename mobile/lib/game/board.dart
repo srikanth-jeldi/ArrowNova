@@ -450,12 +450,13 @@ class BoardGeometry {
     }
     final topLeft = point(Cell(minX, minY));
     final bottomRight = point(Cell(maxX, maxY));
+    final maxRadius = puzzle.level == 1 ? 52.0 : 38.0;
     return RescuePlacement(
       Offset(
         (topLeft.dx + bottomRight.dx) / 2,
         (topLeft.dy + bottomRight.dy) / 2,
       ),
-      min(38, max(34, step * 3.8)),
+      min(maxRadius, max(34, step * 3.8)),
     );
   }
 

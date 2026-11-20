@@ -171,7 +171,7 @@ class LevelCatalog {
         : endless
         ? EndlessCatalog.arrowCount(level)
         : arrowCount(level);
-    if (rescue && level == 1) return _rescueReferenceLayout(level);
+    if (rescue && level == 1) return _legacyRescueOpeningMaze(level);
     if (rescue && level >= 2) {
       // Let later Rescue missions grow from increasingly dense hard boards.
       final sourceLevel = level <= 10
@@ -407,7 +407,147 @@ class LevelCatalog {
     );
   }
 
-  static Puzzle _rescueReferenceLayout(int level) {
+  static Puzzle _rescueOpeningMaze(int level) {
+    const width = 24, height = 35;
+
+    // Each list traces one arrow from tail to head. Only turns and endpoints
+    // are stored. The final four routes frame the animal's pocket.
+    const routes = <List<(int, int)>>[
+      [(1, 32), (1, 33), (5, 33), (5, 32), (8, 32), (8, 33), (13, 33), (13, 32), (17, 32), (17, 33), (23, 33)],
+      [(22, 31), (19, 31), (19, 30), (14, 30), (14, 31), (10, 31), (10, 30), (4, 30), (4, 31), (0, 31)],
+      [(3, 34), (20, 34)],
+      [(22, 5), (21, 5), (21, 1), (20, 1), (20, 6), (23, 6)],
+      [(16, 3), (17, 3), (17, 6), (19, 6), (19, 2), (13, 2), (13, 0)],
+      [(23, 22), (23, 29), (22, 29), (22, 27), (20, 27), (20, 30), (23, 30)],
+      [(7, 7), (7, 6), (5, 6), (5, 9), (8, 9), (8, 6), (16, 6)],
+      [(18, 16), (18, 14), (19, 14), (19, 19), (17, 19), (17, 13), (20, 13), (20, 7)],
+      [(7, 27), (12, 27), (12, 24), (17, 24), (17, 22), (20, 22), (20, 14)],
+      [(10, 29), (8, 29), (8, 28), (11, 28), (11, 30), (13, 30)],
+      [(0, 3), (6, 3), (6, 0), (4, 0)],
+      [(15, 3), (15, 4), (16, 4), (16, 5), (14, 5), (14, 3), (7, 3)],
+      [(20, 26), (22, 26), (22, 24), (19, 24), (19, 28), (18, 28), (18, 23), (22, 23)],
+      [(7, 26), (6, 26), (6, 28), (7, 28), (7, 29), (5, 29), (5, 25), (0, 25)],
+      [(4, 27), (4, 26), (0, 26), (0, 27), (1, 27), (1, 30)],
+      [(2, 7), (0, 7), (0, 4), (2, 4), (2, 6), (4, 6), (4, 10), (0, 10)],
+      [(8, 1), (9, 1), (9, 0), (7, 0), (7, 2), (10, 2), (10, 0)],
+      [(21, 7), (23, 7), (23, 8), (21, 8), (21, 11), (23, 11)],
+      [(9, 26), (8, 26), (8, 25), (6, 25), (6, 21), (4, 21), (4, 11), (0, 11)],
+      [(18, 12), (19, 12), (19, 7), (14, 7), (14, 11), (7, 11), (7, 10), (5, 10)],
+      [(8, 24), (7, 24), (7, 23), (11, 23), (11, 25), (9, 25)],
+      [(23, 16), (23, 13), (22, 13), (22, 22), (21, 22), (21, 12), (23, 12)],
+      [(3, 17), (3, 12), (0, 12)],
+      [(0, 15), (0, 13)],
+      [(3, 18), (0, 18)],
+      [(5, 22), (0, 22), (0, 19)],
+      [(19, 29), (17, 29), (17, 25), (13, 25), (13, 29)],
+      [(4, 28), (4, 29), (3, 29), (3, 27), (2, 27), (2, 30), (3, 30)],
+      [(8, 5), (3, 5), (3, 4), (9, 4), (9, 5), (13, 5), (13, 4)],
+      [(10, 8), (12, 8), (12, 9), (9, 9), (9, 7), (13, 7), (13, 10), (8, 10)],
+      [(5, 12), (5, 20), (6, 20), (6, 11), (5, 11)],
+      [(15, 28), (15, 27), (16, 27), (16, 29), (14, 29), (14, 26), (16, 26)],
+      [(16, 9), (17, 9), (17, 10), (15, 10), (15, 8), (18, 8), (18, 11), (15, 11)],
+      [(1, 21), (3, 21), (3, 19), (1, 19), (1, 20), (2, 20)],
+      [(2, 14), (2, 17), (0, 17), (0, 16), (1, 16), (1, 13), (2, 13)],
+      [(19, 1), (14, 1), (14, 0), (19, 0)],
+      [(0, 2), (5, 2), (5, 1), (2, 1)],
+      [(5, 23), (5, 24), (0, 24), (0, 23), (4, 23)],
+      [(11, 1), (11, 2), (12, 2), (12, 0), (11, 0)],
+      [(2, 8), (0, 8), (0, 9), (3, 9), (3, 7)],
+      [(12, 32), (9, 32), (9, 31), (5, 31)],
+      [(23, 31), (23, 32), (18, 32), (18, 31), (15, 31)],
+      [(18, 20), (17, 20), (17, 21), (19, 21), (19, 20)],
+      [(22, 3), (22, 4), (23, 4), (23, 2), (22, 2)],
+      [(23, 10), (23, 9), (22, 9), (22, 10)],
+      [(12, 23), (16, 23)],
+      [(23, 17), (23, 21)],
+      [(0, 28), (0, 30)],
+      [(6, 7), (6, 8), (7, 8)],
+      [(0, 32), (0, 33)],
+      [(14, 33), (16, 33)],
+      [(18, 5), (18, 3)],
+      [(10, 4), (12, 4)],
+      [(2, 32), (4, 32)],
+      [(18, 17), (18, 18)],
+      [(9, 24), (10, 24)],
+      [(8, 12), (15, 12)],
+      [(16, 12), (16, 22)],
+      [(15, 22), (8, 22)],
+      [(7, 21), (7, 12)],
+    ];
+    final paths = <ArrowPath>[];
+    for (final route in routes) {
+      final (startX, startY) = route.first;
+      var current = Cell(startX, startY);
+      final cells = [current];
+      for (final (x, y) in route.skip(1)) {
+        final target = Cell(x, y);
+        final step = Cell((x - current.x).sign, (y - current.y).sign);
+        while (current != target) {
+          current += step;
+          cells.add(current);
+        }
+      }
+      paths.add(ArrowPath(paths.length, cells));
+    }
+    return Puzzle(
+      level,
+      width,
+      height,
+      paths,
+      rescueCageIds: {for (var id = paths.length - 4; id < paths.length; id++) id},
+    );
+  }
+  // Disjoint bent tiles create short acyclic removal chains.
+  static Puzzle _circuit(int level) {
+    final count = arrowCount(level);
+    final columns = level <= 5
+        ? 2
+        : level <= 10
+        ? 3
+        : level <= 20
+        ? 4
+        : 5;
+    final rows = (count / columns).ceil();
+    final width = columns * 6 + 1, height = rows * 5 + 1;
+    final random = Random(19391 + level * 137);
+    final arrows = <ArrowPath>[];
+    for (var row = 0; row < rows; row++) {
+      final flip = (row + level).isOdd;
+      for (var col = 0; col < columns && arrows.length < count; col++) {
+        final x = 1 + col * 6, y = 1 + row * 5;
+        final variant = random.nextInt(2);
+        final cells = <Cell>[
+          if (level > 10 && variant == 1) ...[
+            Cell(x + 1, y + 3),
+            Cell(x, y + 3),
+          ],
+          Cell(x, variant == 0 ? y : y + 2),
+          Cell(x, y + 1),
+          Cell(x + 1, y + 1),
+          Cell(x + 2, y + 1),
+          Cell(x + 2, y),
+          Cell(x + 3, y),
+        ];
+        arrows.add(
+          ArrowPath(
+            arrows.length,
+            cells.map((c) {
+              final a = flip ? Cell(width - 1 - c.x, c.y) : c;
+              return level.isEven ? Cell(a.y, width - 1 - a.x) : a;
+            }).toList(),
+          ),
+        );
+      }
+    }
+    return Puzzle(
+      level,
+      level.isEven ? height : width,
+      level.isEven ? width : height,
+      arrows,
+    );
+  }
+
+  static Puzzle _legacyRescueOpeningMaze(int level) {
     const width = 22;
     const height = 32;
     final paths = <ArrowPath>[];
@@ -501,53 +641,109 @@ class LevelCatalog {
     );
   }
 
-  // Disjoint bent tiles create short acyclic removal chains.
-  static Puzzle _circuit(int level) {
-    final count = arrowCount(level);
-    final columns = level <= 5
-        ? 2
-        : level <= 10
-        ? 3
-        : level <= 20
-        ? 4
-        : 5;
-    final rows = (count / columns).ceil();
-    final width = columns * 6 + 1, height = rows * 5 + 1;
-    final random = Random(19391 + level * 137);
+  static Puzzle _packedRescueMaze(int level) {
+    final tier = min(6, (level - 2) ~/ 12);
+    final width = 24 + tier;
+    final height = 35 + tier * 2;
+    final left = width ~/ 2 - 5, right = left + 9;
+    final top = height ~/ 2 - 5, bottom = top + 10;
+    final cage = [
+      [for (var x = left + 1; x < right; x++) Cell(x, top)],
+      [for (var y = top; y <= bottom; y++) Cell(right, y)],
+      [for (var x = right - 1; x > left; x--) Cell(x, bottom)],
+      [for (var y = bottom - 1; y >= top; y--) Cell(left, y)],
+    ];
+    final cageCells = cage.expand((path) => path).toSet();
+    final free = <Cell>{
+      for (var y = 0; y < height; y++)
+        for (var x = 0; x < width; x++)
+          if ((x < left || x > right || y < top || y > bottom) &&
+              !(min(y, height - 1 - y) + min(x, width - 1 - x) < 3))
+            Cell(x, y),
+    };
+    final random = Random(87171 + 24593 * level);
     final arrows = <ArrowPath>[];
-    for (var row = 0; row < rows; row++) {
-      final flip = (row + level).isOdd;
-      for (var col = 0; col < columns && arrows.length < count; col++) {
-        final x = 1 + col * 6, y = 1 + row * 5;
-        final variant = random.nextInt(2);
-        final cells = <Cell>[
-          if (level > 10 && variant == 1) ...[
-            Cell(x + 1, y + 3),
-            Cell(x, y + 3),
-          ],
-          Cell(x, variant == 0 ? y : y + 2),
-          Cell(x, y + 1),
-          Cell(x + 1, y + 1),
-          Cell(x + 2, y + 1),
-          Cell(x + 2, y),
-          Cell(x + 3, y),
-        ];
-        arrows.add(
-          ArrowPath(
-            arrows.length,
-            cells.map((c) {
-              final a = flip ? Cell(width - 1 - c.x, c.y) : c;
-              return level.isEven ? Cell(a.y, width - 1 - a.x) : a;
-            }).toList(),
-          ),
-        );
+    while (free.length > 1) {
+      final rowMin = List.filled(height, width);
+      final rowMax = List.filled(height, -1);
+      final colMin = List.filled(width, height);
+      final colMax = List.filled(width, -1);
+      // The cage remains occupied during peeling. Every selected head can
+      // exit through the edge once earlier picks have been removed.
+      for (final cell in [...free, ...cageCells]) {
+        final Cell(:x, :y) = cell;
+        rowMin[y] = min(rowMin[y], x);
+        rowMax[y] = max(rowMax[y], x);
+        colMin[x] = min(colMin[x], y);
+        colMax[x] = max(colMax[x], y);
       }
+      final heads = <(Cell, Cell)>[
+        for (var y = 0; y < height; y++) ...[
+          (Cell(rowMin[y], y), const Cell(-1, 0)),
+          (Cell(rowMax[y], y), const Cell(1, 0)),
+        ],
+        for (var x = 0; x < width; x++) ...[
+          (Cell(x, colMin[x]), const Cell(0, -1)),
+          (Cell(x, colMax[x]), const Cell(0, 1)),
+        ],
+      ]..removeWhere(
+        (exit) => !free.contains(exit.$1) || !free.contains(exit.$1 - exit.$2),
+      );
+      if (heads.isEmpty) break;
+      heads.shuffle(random);
+      final length = arrows.length % 5 == 0
+          ? 22 + random.nextInt(10)
+          : 9 + random.nextInt(10);
+      List<Cell>? best;
+      var bestScore = -double.infinity;
+      for (final (head, direction) in heads.take(30)) {
+        final path = [head, head - direction];
+        final used = path.toSet();
+        var heading = path.last - head;
+        var straight = 1;
+        var turns = 0;
+        while (path.length < length) {
+          final options = _directions
+              .where((d) => free.contains(path.last + d) && !used.contains(path.last + d))
+              .toList();
+          if (options.isEmpty) break;
+          final next = options.contains(heading) &&
+                  (straight < 2 || random.nextDouble() < .75)
+              ? heading
+              : options[random.nextInt(options.length)];
+          if (next != heading) {
+            turns++;
+            straight = 0;
+          }
+          heading = next;
+          straight++;
+          final cell = path.last + heading;
+          used.add(cell);
+          path.add(cell);
+        }
+        final exit = head + direction;
+        final interior = exit.x >= 0 && exit.x < width && exit.y >= 0 && exit.y < height;
+        final score = path.length + min(turns, 5) * 1.1 +
+            (interior ? 1.5 + tier * .35 : 0) + random.nextDouble();
+        if (score > bestScore) {
+          bestScore = score;
+          best = path;
+        }
+      }
+      final path = best!;
+      free.removeAll(path);
+      arrows.add(ArrowPath(arrows.length, path.reversed.toList()));
+    }
+    final cageStart = arrows.length;
+    for (final route in cage) {
+      arrows.add(ArrowPath(arrows.length, route));
     }
     return Puzzle(
       level,
-      level.isEven ? height : width,
-      level.isEven ? width : height,
+      width,
+      height,
       arrows,
+      rescueCageIds: {for (var i = cageStart; i < arrows.length; i++) i},
     );
   }
 
@@ -756,7 +952,18 @@ class RescueCatalog {
     if (round < 1 || round > count) throw RangeError.range(round, 1, count);
     if (_cache.containsKey(round)) return _cache[round]!;
     if (_cache.length >= 24) _cache.remove(_cache.keys.first);
-    return _cache[round] = LevelCatalog._generate(round, rescue: true);
+    return _cache[round] = round == 1
+        ? LevelCatalog._rescueOpeningMaze(round)
+        : LevelCatalog._packedRescueMaze(round);
+  }
+
+  static Puzzle resume(int round, Map<String, dynamic>? run) {
+    final current = get(round);
+    if (run == null || run['layout'] == GameSession(current).layoutKey) {
+      return current;
+    }
+    final previous = LevelCatalog._generate(round, rescue: true);
+    return run['layout'] == GameSession(previous).layoutKey ? previous : current;
   }
 }
 
